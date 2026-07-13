@@ -487,7 +487,10 @@ body {
 .rlabel-input {
   background: transparent; border: none; color: var(--text);
   font: inherit; font-size: 13px; font-weight: 600; letter-spacing: 0.02em;
-  padding: 2px 0; min-width: 3ch;
+  padding: 2px 0; min-width: 3ch; max-width: 22ch;
+  /* Hug the text so there's no dead space before the ✕. Falls back to the
+     `size` attribute where field-sizing is unsupported. */
+  field-sizing: content;
 }
 .rlabel-input:focus { outline: none; }
 .rlabel-input::placeholder { color: var(--muted); font-weight: 400; }

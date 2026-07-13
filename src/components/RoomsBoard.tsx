@@ -224,7 +224,7 @@ export function RoomsBoard({
               value={label.text}
               placeholder="Room"
               aria-label="Room name"
-              size={Math.max(4, label.text.length)}
+              size={Math.max(1, label.text.length)}
               ref={(el) => {
                 if (el && focusId.current === label.id) {
                   el.focus()
