@@ -1,5 +1,5 @@
 :root {
-  --cell: 36px;          /* grid cell size */
+  --cell: 72px;          /* grid cell size */
 
   --bg: #14161c;
   --panel: #1c1f27;
@@ -22,8 +22,8 @@
   --slot-fill: #6ea8fe;  /* a filled (existing) cell in the shape editor */
 
   --wall: #c9d2e3;       /* room-boundary wall between two cells */
-  --wall-thick: 4px;     /* wall line thickness */
-  --wall-hit: 12px;      /* clickable strip width straddling an edge (editor) */
+  --wall-thick: 8px;     /* wall line thickness */
+  --wall-hit: 24px;      /* clickable strip width straddling an edge (editor) */
 
   color-scheme: dark;
 }
