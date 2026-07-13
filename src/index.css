@@ -548,7 +548,22 @@ body {
 /* Play mode: the cast sits to the left of the board as a 2-column grid. On
    narrow screens the board wraps below the panel. */
 .play-layout { display: flex; align-items: flex-start; gap: 20px; flex-wrap: wrap; }
-.play-layout .board-scroll { flex: 1 1 320px; min-width: 0; }
+/* The board and the accusation picker stack in one column beside the cast. */
+.play-board-col { flex: 1 1 320px; min-width: 0; display: flex; flex-direction: column; gap: 14px; }
+.play-board-col .board-scroll { min-width: 0; }
+
+/* Final accusation below the board: pick which suspect (never the victim) the
+   player concludes is the murderer. Persisted per puzzle, independent of the
+   board marks — clearing it back to "no choice" is its own dropdown option. */
+.murderer-pick { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
+.murderer-pick-label { font-size: 15px; font-weight: 600; }
+.murderer-select {
+  flex: 1; min-width: 180px; max-width: 320px;
+  background: var(--panel-2); color: var(--text);
+  border: 1px solid var(--line-strong); border-radius: 8px;
+  padding: 8px 10px; font: inherit; font-size: 14px; cursor: pointer;
+}
+.murderer-select:hover { border-color: var(--accent); }
 .persona-list {
   flex: none; width: 340px; max-width: 100%;
   display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px;

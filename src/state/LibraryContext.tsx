@@ -86,6 +86,8 @@ export interface LibraryApi {
   setPersonaName: (puzzleId: string, id: string, name: string) => void
   setPersonaDescription: (puzzleId: string, id: string, description: string) => void
   removePersona: (puzzleId: string, id: string) => void
+  /** Set (or clear, with `null`) the player's final accusation — always a suspect. */
+  setMurderer: (puzzleId: string, personaId: string | null) => void
   // Play
   cycleCell: (puzzleId: string, x: number, y: number) => void
   clearMarks: (puzzleId: string) => void
@@ -184,6 +186,7 @@ export function LibraryProvider({ children }: { children: ReactNode }): JSX.Elem
           guesses: {},
           answers: {},
           crosses: {},
+          murderer: null,
           createdAt: now(),
           updatedAt: now(),
         }
@@ -376,13 +379,26 @@ export function LibraryProvider({ children }: { children: ReactNode }): JSX.Elem
           // The victim is permanent, and at least one suspect must remain.
           if (!target || target.role === 'victim') return p
           if (suspectsOf(p.personas).length <= 1) return p
-          // Drop the removed suspect's letter from any cell it was guessed or answered in.
+          // Drop the removed suspect's letter from any cell it was guessed or
+          // answered in, and clear the accusation if it named this suspect.
           return {
             ...p,
             personas: p.personas.filter((x) => x.id !== id),
             guesses: pruneGuessPersona(p.guesses, id),
             answers: pruneAnswerPersona(p.answers, id),
+            murderer: p.murderer === id ? null : p.murderer,
           }
+        })
+      },
+
+      setMurderer(puzzleId, personaId) {
+        patchPuzzle(puzzleId, (p) => {
+          // Clearing (null) always applies; naming someone only if they're an
+          // actual suspect in this cast — never the victim, never a stale id.
+          if (personaId !== null && !suspectsOf(p.personas).some((s) => s.id === personaId)) {
+            return p
+          }
+          return p.murderer === personaId ? p : { ...p, murderer: personaId }
         })
       },
 

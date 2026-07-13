@@ -145,6 +145,15 @@ export interface Puzzle {
    * drops its entry.
    */
   crosses: Record<string, true>
+  /**
+   * The player's final accusation: the id of the suspect they've concluded is
+   * the murderer, or `null` while undecided. Always a *suspect* — the victim is
+   * never a valid choice — and only one at a time. Unlike the per-cell play maps
+   * above this names the whole solve's answer, so it sits below the board rather
+   * than in a cell. Removing the accused suspect from the cast clears it back to
+   * `null`.
+   */
+  murderer: string | null
   createdAt: number
   updatedAt: number
 }
@@ -158,7 +167,7 @@ export interface Folder {
 
 /** The entire persisted library — one blob in localStorage / a save file. */
 export interface Library {
-  version: 10
+  version: 11
   folders: Folder[]
   puzzles: Record<string, Puzzle>
 }

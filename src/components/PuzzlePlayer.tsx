@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from 'react'
 import { useLibrary } from '../state/LibraryContext'
-import { personaLabel } from '../lib/personas'
+import { personaLabel, suspectsOf } from '../lib/personas'
 import {
   loadAutoCleanup,
   loadHighlightPlacements,
@@ -21,7 +21,7 @@ interface PuzzlePlayerProps {
 }
 
 export function PuzzlePlayer({ puzzleId, onBack, onEdit }: PuzzlePlayerProps): JSX.Element {
-  const { library, toggleGuess, setAnswer, toggleCross, clearBoard } = useLibrary()
+  const { library, toggleGuess, setAnswer, toggleCross, clearBoard, setMurderer } = useLibrary()
 
   // The tool picked up for placing. Either a persona (its letter rides the cursor)
   // or the X tool (`crossActive`) — mutually exclusive. Cleared on Esc or when the
@@ -153,6 +153,11 @@ export function PuzzlePlayer({ puzzleId, onBack, onEdit }: PuzzlePlayerProps): J
     Object.keys(puzzle.answers).length > 0 ||
     Object.keys(puzzle.crosses).length > 0
 
+  // The accusation dropdown lists only suspects (never the victim). Resolve the
+  // stored id to a live suspect so a stale one reads as no choice made.
+  const suspects = suspectsOf(puzzle.personas)
+  const murdererValue = suspects.some((s) => s.id === puzzle.murderer) ? puzzle.murderer! : ''
+
   return (
     <div className="view player">
       <div className="view-head">
@@ -238,24 +243,48 @@ export function PuzzlePlayer({ puzzleId, onBack, onEdit }: PuzzlePlayerProps): J
             crossActive={crossActive}
             onPickCross={pickCross}
           />
-          <div className="board-scroll">
-            <PlayerBoard
-              puzzle={puzzle}
-              active={holdingTool}
-              summaries={summaries}
-              highlightId={highlight && activePersona ? activeId : null}
-              onPlace={
-                holdingTool
-                  ? (x, y) => {
-                      if (crossActive) toggleCross(puzzleId, x, y)
-                      else if (activePersona) {
-                        if (effectiveMode === 'answer') setAnswer(puzzleId, x, y, activePersona.id, autoCleanup)
-                        else toggleGuess(puzzleId, x, y, activePersona.id)
+          <div className="play-board-col">
+            <div className="board-scroll">
+              <PlayerBoard
+                puzzle={puzzle}
+                active={holdingTool}
+                summaries={summaries}
+                highlightId={highlight && activePersona ? activeId : null}
+                onPlace={
+                  holdingTool
+                    ? (x, y) => {
+                        if (crossActive) toggleCross(puzzleId, x, y)
+                        else if (activePersona) {
+                          if (effectiveMode === 'answer') setAnswer(puzzleId, x, y, activePersona.id, autoCleanup)
+                          else toggleGuess(puzzleId, x, y, activePersona.id)
+                        }
                       }
-                    }
-                  : undefined
-              }
-            />
+                    : undefined
+                }
+              />
+            </div>
+            <div className="murderer-pick">
+              <label className="murderer-pick-label" htmlFor="murderer-select">
+                The murderer is…
+              </label>
+              <select
+                id="murderer-select"
+                className="murderer-select"
+                value={murdererValue}
+                onChange={(e) => setMurderer(puzzleId, e.target.value || null)}
+              >
+                <option value="">— choose a suspect —</option>
+                {suspects.map((s) => {
+                  const label = personaLabel(puzzle.personas, s)
+                  const name = s.name.trim()
+                  return (
+                    <option key={s.id} value={s.id}>
+                      {label} — {name || `Suspect ${label}`}
+                    </option>
+                  )
+                })}
+              </select>
+            </div>
           </div>
         </div>
       ) : (
