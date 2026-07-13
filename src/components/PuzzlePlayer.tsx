@@ -30,7 +30,7 @@ export function PuzzlePlayer({ puzzleId, onBack, onEdit }: PuzzlePlayerProps): J
           <h1 className="view-title">{puzzle.name}</h1>
         </div>
         <div className="view-head-actions">
-          <button type="button" className="btn" onClick={onEdit}>Edit shape</button>
+          <button type="button" className="btn" onClick={onEdit}>Edit puzzle</button>
           <button
             type="button"
             className="btn btn-ghost"

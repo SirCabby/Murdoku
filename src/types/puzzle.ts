@@ -26,6 +26,13 @@ export interface Puzzle {
    * the cell exists; its value holds the mark/note. Absent = no cell there.
    */
   cells: Record<string, CellState>
+  /**
+   * Thick borders between adjacent cells that fence off rooms. Keyed by a
+   * canonical edge string (`"x,y,v"` / `"x,y,h"`, see `lib/walls.ts`); a present
+   * key means a wall sits on that edge. Only interior edges (both cells exist)
+   * are ever stored — removing a cell prunes any wall touching it.
+   */
+  walls: Record<string, true>
   createdAt: number
   updatedAt: number
 }
@@ -39,7 +46,7 @@ export interface Folder {
 
 /** The entire persisted library — one blob in localStorage / a save file. */
 export interface Library {
-  version: 2
+  version: 3
   folders: Folder[]
   puzzles: Record<string, Puzzle>
 }

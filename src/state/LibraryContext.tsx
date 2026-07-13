@@ -17,6 +17,7 @@ import {
   setNote,
   setRectangle,
 } from '../lib/board'
+import { pruneWalls, setWall as setWallOp } from '../lib/walls'
 import { cellKey } from '../lib/coords'
 import { newId } from '../lib/id'
 
@@ -37,6 +38,9 @@ export interface LibraryApi {
   setCellExists: (puzzleId: string, x: number, y: number, exists: boolean) => void
   setRectangle: (puzzleId: string, width: number, height: number) => void
   clearShape: (puzzleId: string) => void
+  // Walls (room boundaries)
+  setWall: (puzzleId: string, key: string, on: boolean) => void
+  clearWalls: (puzzleId: string) => void
   // Play
   cycleCell: (puzzleId: string, x: number, y: number) => void
   noteCell: (puzzleId: string, x: number, y: number, note: string) => void
@@ -101,6 +105,7 @@ export function LibraryProvider({ children }: { children: ReactNode }): JSX.Elem
           id: newId(),
           name: name.trim() || 'Untitled puzzle',
           cells: {},
+          walls: {},
           createdAt: now(),
           updatedAt: now(),
         }
@@ -134,15 +139,37 @@ export function LibraryProvider({ children }: { children: ReactNode }): JSX.Elem
       },
 
       setCellExists(puzzleId, x, y, exists) {
-        patchPuzzle(puzzleId, (p) => ({ ...p, cells: setCellExists(p.cells, x, y, exists) }))
+        patchPuzzle(puzzleId, (p) => {
+          const cells = setCellExists(p.cells, x, y, exists)
+          if (cells === p.cells) return p
+          // Removing a cell can orphan walls; adding one never does.
+          const walls = exists ? p.walls : pruneWalls(p.walls, cells)
+          return { ...p, cells, walls }
+        })
       },
 
       setRectangle(puzzleId, width, height) {
-        patchPuzzle(puzzleId, (p) => ({ ...p, cells: setRectangle(p.cells, width, height) }))
+        patchPuzzle(puzzleId, (p) => {
+          const cells = setRectangle(p.cells, width, height)
+          return { ...p, cells, walls: pruneWalls(p.walls, cells) }
+        })
       },
 
       clearShape(puzzleId) {
-        patchPuzzle(puzzleId, (p) => ({ ...p, cells: {} }))
+        patchPuzzle(puzzleId, (p) => ({ ...p, cells: {}, walls: {} }))
+      },
+
+      setWall(puzzleId, key, on) {
+        patchPuzzle(puzzleId, (p) => {
+          const walls = setWallOp(p.walls, key, on)
+          return walls === p.walls ? p : { ...p, walls }
+        })
+      },
+
+      clearWalls(puzzleId) {
+        patchPuzzle(puzzleId, (p) =>
+          Object.keys(p.walls).length === 0 ? p : { ...p, walls: {} }
+        )
       },
 
       cycleCell(puzzleId, x, y) {
