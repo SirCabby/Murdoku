@@ -368,6 +368,57 @@ body {
   border-radius: 6px; padding: 1px 7px;
 }
 
+/* ---- Personas (People tab) ---- */
+.personas { max-width: 640px; display: flex; flex-direction: column; gap: 24px; }
+.persona-group { display: flex; flex-direction: column; gap: 10px; }
+.persona-group-head { display: flex; align-items: baseline; gap: 8px; }
+.persona-group-title { font-size: 15px; margin: 0; }
+.persona-group-count { font-size: 13px; color: var(--muted); }
+.persona-card {
+  display: flex; align-items: flex-start; gap: 12px;
+  background: var(--panel); border: 1px solid var(--line);
+  border-radius: 10px; padding: 12px;
+}
+.persona-badge {
+  flex: none; width: 34px; height: 34px; border-radius: 8px;
+  display: inline-flex; align-items: center; justify-content: center;
+  font-weight: 700; font-size: 15px;
+  background: var(--accent); color: var(--accent-ink);
+}
+/* The victim's badge reads as distinct from the accent-filled suspects. */
+.persona-card-victim .persona-badge {
+  background: var(--panel-2); color: var(--text);
+  border: 1px solid var(--line-strong);
+}
+.persona-fields { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 8px; }
+.persona-name { font-weight: 600; }
+.persona-desc { resize: vertical; min-height: 58px; line-height: 1.4; }
+.persona-del {
+  flex: none; width: 26px; height: 26px; border-radius: 6px;
+  border: 1px solid var(--line); background: var(--panel-2); color: var(--muted);
+  cursor: pointer; font-size: 13px; line-height: 1;
+  display: inline-flex; align-items: center; justify-content: center;
+}
+.persona-del:hover { background: var(--no-fg); color: #fff; border-color: transparent; }
+.persona-del:disabled { opacity: 0.4; cursor: default; }
+.persona-del:disabled:hover { background: var(--panel-2); color: var(--muted); border-color: var(--line); }
+.persona-add { align-self: flex-start; }
+
+/* Play mode: the cast sits to the left of the board as a 2-column grid. On
+   narrow screens the board wraps below the panel. */
+.play-layout { display: flex; align-items: flex-start; gap: 20px; flex-wrap: wrap; }
+.play-layout .board-scroll { flex: 1 1 320px; min-width: 0; }
+.persona-list {
+  flex: none; width: 340px; max-width: 100%;
+  display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px;
+}
+.persona-list-title { grid-column: 1 / -1; margin: 0 0 2px; font-size: 15px; }
+.persona-list .persona-card { padding: 10px; gap: 10px; }
+.persona-read { min-width: 0; display: flex; flex-direction: column; gap: 3px; }
+.persona-read-name { font-weight: 600; font-size: 14px; overflow-wrap: anywhere; }
+.persona-read-name.is-empty { font-weight: 400; font-style: italic; color: var(--muted); }
+.persona-read-desc { font-size: 12px; color: var(--muted); line-height: 1.4; overflow-wrap: anywhere; }
+
 /* ---- Note popover ---- */
 .note-popover {
   position: absolute; z-index: 20; top: calc(var(--cell) + 4px); left: 0;

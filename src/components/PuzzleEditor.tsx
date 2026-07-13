@@ -7,13 +7,14 @@ import { WallsBoard } from './WallsBoard'
 import { ObjectsBoard } from './ObjectsBoard'
 import type { ObjectTool } from './ObjectsBoard'
 import { RoomsBoard } from './RoomsBoard'
+import { PersonasEditor } from './PersonasEditor'
 
 interface PuzzleEditorProps {
   puzzleId: string
   onDone: () => void
 }
 
-type EditMode = 'shape' | 'walls' | 'objects' | 'rooms'
+type EditMode = 'shape' | 'walls' | 'objects' | 'rooms' | 'people'
 
 /**
  * Defines a puzzle's shape and its room walls. Edits apply live to the library —
@@ -37,6 +38,10 @@ export function PuzzleEditor({ puzzleId, onDone }: PuzzleEditorProps): JSX.Eleme
     setLabelText,
     removeLabel,
     clearLabels,
+    addSuspect,
+    setPersonaName,
+    setPersonaDescription,
+    removePersona,
   } = useLibrary()
   const puzzle = library.puzzles[puzzleId]
 
@@ -117,6 +122,15 @@ export function PuzzleEditor({ puzzleId, onDone }: PuzzleEditorProps): JSX.Eleme
           onClick={() => setMode('rooms')}
         >
           Rooms
+        </button>
+        <button
+          type="button"
+          role="tab"
+          aria-selected={mode === 'people'}
+          className={`seg${mode === 'people' ? ' active' : ''}`}
+          onClick={() => setMode('people')}
+        >
+          People
         </button>
       </div>
 
@@ -329,6 +343,23 @@ export function PuzzleEditor({ puzzleId, onDone }: PuzzleEditorProps): JSX.Eleme
           ) : (
             <p className="empty-state">Add some cells in Shape mode first, then come back to name the rooms.</p>
           )}
+        </>
+      )}
+
+      {mode === 'people' && (
+        <>
+          <p className="hint">
+            Every puzzle has one or more suspects (lettered A, B, C… as you add them) and exactly one
+            victim (V). Give each a name and a description.
+          </p>
+
+          <PersonasEditor
+            puzzle={puzzle}
+            onAddSuspect={() => addSuspect(puzzleId)}
+            onSetName={(id, name) => setPersonaName(puzzleId, id, name)}
+            onSetDescription={(id, description) => setPersonaDescription(puzzleId, id, description)}
+            onRemove={(id) => removePersona(puzzleId, id)}
+          />
         </>
       )}
     </div>

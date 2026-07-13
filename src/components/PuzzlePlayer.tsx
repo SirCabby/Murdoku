@@ -1,5 +1,6 @@
 import { useLibrary } from '../state/LibraryContext'
 import { PlayerBoard } from './PlayerBoard'
+import { PersonaList } from './PersonaList'
 
 interface PuzzlePlayerProps {
   puzzleId: string
@@ -35,8 +36,11 @@ export function PuzzlePlayer({ puzzleId, onBack, onEdit }: PuzzlePlayerProps): J
       </div>
 
       {hasCells ? (
-        <div className="board-scroll">
-          <PlayerBoard puzzle={puzzle} />
+        <div className="play-layout">
+          <PersonaList personas={puzzle.personas} />
+          <div className="board-scroll">
+            <PlayerBoard puzzle={puzzle} />
+          </div>
         </div>
       ) : (
         <div className="empty-state">

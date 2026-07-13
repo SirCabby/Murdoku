@@ -1,7 +1,8 @@
-import type { CellObjectKind, CellState, Folder, Library, Puzzle, RoomLabel } from '../types/puzzle'
+import type { CellObjectKind, CellState, Folder, Library, Persona, Puzzle, RoomLabel } from '../types/puzzle'
 import { cellKey } from './coords'
 import { wallKey } from './walls'
 import { snapLabelToRoomBottom } from './rooms'
+import { defaultPersonas } from './personas'
 import { newId } from './id'
 
 // Persistence for the whole library. For now this is localStorage, which keeps
@@ -9,10 +10,11 @@ import { newId } from './id'
 // will additionally sync this blob to the connected save file (see lib/gst.ts);
 // that hook is intentionally not wired up yet.
 
-const STORAGE_KEY = 'murdoku.library.v6'
+const STORAGE_KEY = 'murdoku.library.v7'
 // Older blobs still sitting in some users' storage, newest first. Each is
 // upgraded forward by `coerceLibrary` and then removed once read.
 const LEGACY_KEYS = [
+  'murdoku.library.v6',
   'murdoku.library.v5',
   'murdoku.library.v4',
   'murdoku.library.v3',
@@ -20,7 +22,7 @@ const LEGACY_KEYS = [
 ]
 
 export function emptyLibrary(): Library {
-  return { version: 6, folders: [], puzzles: {} }
+  return { version: 7, folders: [], puzzles: {} }
 }
 
 export function loadLibrary(): Library {
@@ -64,21 +66,22 @@ export function parseLibrary(text: string): Library {
 
 /**
  * Validate an already-parsed value and normalize it to the current Library
- * shape, or return null if it isn't one. Accepts the current version (6) and
+ * shape, or return null if it isn't one. Accepts the current version (7) and
  * upgrades older blobs forward one step at a time: v2 (no walls) → v3 (no
  * objects) → v4 (no room labels) → v5 (labels mid-cell) → v6 (labels snapped to
- * bottom walls). Validation is shallow — the same trust level the app has always
- * applied to its own localStorage blob.
+ * bottom walls) → v7 (no personas). Validation is shallow — the same trust level
+ * the app has always applied to its own localStorage blob.
  */
 function coerceLibrary(value: unknown): Library | null {
   if (!value || typeof value !== 'object') return null
   const v = value as { version?: unknown; folders?: unknown }
   if (!Array.isArray(v.folders)) return null
-  if (v.version === 6) return value as Library
-  if (v.version === 5) return upgradeV5(value as LibraryV5)
-  if (v.version === 4) return upgradeV5(upgradeV4(value as LibraryV4))
-  if (v.version === 3) return upgradeV5(upgradeV4(upgradeV3(value as LibraryV3)))
-  if (v.version === 2) return upgradeV5(upgradeV4(upgradeV3(upgradeV2(value as LibraryV2))))
+  if (v.version === 7) return value as Library
+  if (v.version === 6) return upgradeV6(value as LibraryV6)
+  if (v.version === 5) return upgradeV6(upgradeV5(value as LibraryV5))
+  if (v.version === 4) return upgradeV6(upgradeV5(upgradeV4(value as LibraryV4)))
+  if (v.version === 3) return upgradeV6(upgradeV5(upgradeV4(upgradeV3(value as LibraryV3))))
+  if (v.version === 2) return upgradeV6(upgradeV5(upgradeV4(upgradeV3(upgradeV2(value as LibraryV2)))))
   return null
 }
 
@@ -115,8 +118,8 @@ function upgradeV4(old: LibraryV4): LibraryV5 {
  * them down onto the bottom wall (once, on load) so they line up with new
  * labels. `snapLabelToRoomBottom` resolves each label back to its room.
  */
-function upgradeV5(old: LibraryV5): Library {
-  const puzzles: Record<string, Puzzle> = {}
+function upgradeV5(old: LibraryV5): LibraryV6 {
+  const puzzles: Record<string, PuzzleV6> = {}
   for (const [id, p] of Object.entries(old.puzzles)) {
     puzzles[id] = {
       ...p,
@@ -124,6 +127,19 @@ function upgradeV5(old: LibraryV5): Library {
     }
   }
   return { version: 6, folders: old.folders, puzzles }
+}
+
+/**
+ * Seed a starting cast on every puzzle, taking v6 to v7: one suspect and the
+ * victim (see `defaultPersonas`). Existing puzzles predate personas, so they all
+ * begin with the same blank cast the author can then flesh out.
+ */
+function upgradeV6(old: LibraryV6): Library {
+  const puzzles: Record<string, Puzzle> = {}
+  for (const [id, p] of Object.entries(old.puzzles)) {
+    puzzles[id] = { ...p, personas: defaultPersonas() }
+  }
+  return { version: 7, folders: old.folders, puzzles }
 }
 
 /** A pre-walls (version 2) puzzle, as it still sits in some users' storage. */
@@ -175,6 +191,18 @@ interface LibraryV5 {
   puzzles: Record<string, PuzzleV5>
 }
 
+/**
+ * A version-6 puzzle — labels snapped to bottom walls, but no personas yet.
+ * Structurally identical to v5's puzzle shape (v5→v6 only repositioned labels).
+ */
+type PuzzleV6 = PuzzleV5
+
+interface LibraryV6 {
+  version: 6
+  folders: Folder[]
+  puzzles: Record<string, PuzzleV6>
+}
+
 export function saveLibrary(library: Library): void {
   try {
     localStorage.setItem(STORAGE_KEY, JSON.stringify(library))
@@ -189,7 +217,8 @@ export function saveLibrary(library: Library): void {
  * to show that grids aren't always rectangles. A few walls fence a 2×2 room off
  * the top-left corner, and a couple of objects plus a perimeter window show the
  * furnishing features out of the box, and each of the two rooms carries a name
- * label. Timestamps are fixed so the seed is deterministic.
+ * label. A small cast — two suspects and the victim — shows the personas feature.
+ * Timestamps are fixed so the seed is deterministic.
  */
 function seedLibrary(): Library {
   const blank = (): CellState => ({ mark: 'blank', note: '' })
@@ -235,11 +264,33 @@ function seedLibrary(): Library {
     { id: newId(), text: 'Parlor', x: 2, y: 4 },
   ]
 
+  // Two suspects (lettered A, B by order) and the victim (V).
+  const personas: Persona[] = [
+    {
+      id: newId(),
+      role: 'suspect',
+      name: 'Miss Scarlet',
+      description: 'A retired stage actress with a flair for the dramatic.',
+    },
+    {
+      id: newId(),
+      role: 'suspect',
+      name: 'Colonel Mustard',
+      description: 'A decorated officer, quick to anger.',
+    },
+    {
+      id: newId(),
+      role: 'victim',
+      name: 'Mr. Boddy',
+      description: 'The host of the evening, found in the parlor.',
+    },
+  ]
+
   const puzzleId = newId()
   const folderId = newId()
 
   return {
-    version: 6,
+    version: 7,
     folders: [{ id: folderId, name: 'My Cases', puzzleIds: [puzzleId] }],
     puzzles: {
       [puzzleId]: {
@@ -250,6 +301,7 @@ function seedLibrary(): Library {
         objects,
         windows,
         labels,
+        personas,
         createdAt: 0,
         updatedAt: 0,
       },

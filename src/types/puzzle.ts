@@ -58,6 +58,28 @@ export interface RoomLabel {
   y: number
 }
 
+/** A persona is either one of the puzzle's suspects or its single victim. */
+export type PersonaRole = 'suspect' | 'victim'
+
+/**
+ * A character in the puzzle: a suspect or the victim. A puzzle always has one or
+ * more suspects and exactly one victim.
+ *
+ * Display labels are *derived*, never stored: the victim is always `V`, and the
+ * suspects are lettered `A`, `B`, `C`, … by their order among the suspects (see
+ * `lib/personas.ts`). Only the identity (`id`) is stable — relettering a suspect
+ * after a deletion doesn't disturb the others' ids, matching how item ids stay
+ * put across relabels elsewhere in the app.
+ */
+export interface Persona {
+  id: string
+  role: PersonaRole
+  /** The character's name. Empty string until the author fills it in. */
+  name: string
+  /** Free-text description / backstory. Empty string = none. */
+  description: string
+}
+
 export interface Puzzle {
   id: string
   name: string
@@ -91,6 +113,12 @@ export interface Puzzle {
    * survives shape and wall edits and can be slid freely along the walls.
    */
   labels: RoomLabel[]
+  /**
+   * The puzzle's cast: one or more suspects plus exactly one victim. Order among
+   * the suspects sets their derived letters (see `Persona`); the array as a whole
+   * has no spatial meaning, unlike the maps above.
+   */
+  personas: Persona[]
   createdAt: number
   updatedAt: number
 }
@@ -104,7 +132,7 @@ export interface Folder {
 
 /** The entire persisted library — one blob in localStorage / a save file. */
 export interface Library {
-  version: 6
+  version: 7
   folders: Folder[]
   puzzles: Record<string, Puzzle>
 }

@@ -7,8 +7,9 @@ import {
   useState,
 } from 'react'
 import type { ReactNode } from 'react'
-import type { CellObjectKind, Folder, Library, Puzzle, RoomLabel } from '../types/puzzle'
+import type { CellObjectKind, Folder, Library, Persona, Puzzle, RoomLabel } from '../types/puzzle'
 import { loadLibrary, saveLibrary } from '../lib/storage'
+import { defaultPersonas, newSuspect, suspectsOf } from '../lib/personas'
 import {
   clearMarks as clearMarksOp,
   nextMark,
@@ -63,6 +64,11 @@ export interface LibraryApi {
   setLabelText: (puzzleId: string, id: string, text: string) => void
   removeLabel: (puzzleId: string, id: string) => void
   clearLabels: (puzzleId: string) => void
+  // Personas (cast of suspects + the victim)
+  addSuspect: (puzzleId: string) => Persona
+  setPersonaName: (puzzleId: string, id: string, name: string) => void
+  setPersonaDescription: (puzzleId: string, id: string, description: string) => void
+  removePersona: (puzzleId: string, id: string) => void
   // Play
   cycleCell: (puzzleId: string, x: number, y: number) => void
   noteCell: (puzzleId: string, x: number, y: number, note: string) => void
@@ -138,6 +144,7 @@ export function LibraryProvider({ children }: { children: ReactNode }): JSX.Elem
           objects: {},
           windows: {},
           labels: [],
+          personas: defaultPersonas(),
           createdAt: now(),
           updatedAt: now(),
         }
@@ -282,6 +289,45 @@ export function LibraryProvider({ children }: { children: ReactNode }): JSX.Elem
 
       clearLabels(puzzleId) {
         patchPuzzle(puzzleId, (p) => (p.labels.length === 0 ? p : { ...p, labels: [] }))
+      },
+
+      addSuspect(puzzleId) {
+        const suspect = newSuspect()
+        // Keep suspects together ahead of the victim so the raw array reads in
+        // label order (A, B, C, … then V); display filters by role regardless.
+        patchPuzzle(puzzleId, (p) => ({
+          ...p,
+          personas: [
+            ...p.personas.filter((x) => x.role === 'suspect'),
+            suspect,
+            ...p.personas.filter((x) => x.role === 'victim'),
+          ],
+        }))
+        return suspect
+      },
+
+      setPersonaName(puzzleId, id, name) {
+        patchPuzzle(puzzleId, (p) => ({
+          ...p,
+          personas: p.personas.map((x) => (x.id === id ? { ...x, name } : x)),
+        }))
+      },
+
+      setPersonaDescription(puzzleId, id, description) {
+        patchPuzzle(puzzleId, (p) => ({
+          ...p,
+          personas: p.personas.map((x) => (x.id === id ? { ...x, description } : x)),
+        }))
+      },
+
+      removePersona(puzzleId, id) {
+        patchPuzzle(puzzleId, (p) => {
+          const target = p.personas.find((x) => x.id === id)
+          // The victim is permanent, and at least one suspect must remain.
+          if (!target || target.role === 'victim') return p
+          if (suspectsOf(p.personas).length <= 1) return p
+          return { ...p, personas: p.personas.filter((x) => x.id !== id) }
+        })
       },
 
       cycleCell(puzzleId, x, y) {
