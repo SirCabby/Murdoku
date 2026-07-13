@@ -10,6 +10,7 @@ import {
   saveShowSummaries,
 } from '../lib/prefs'
 import { usePlayHistory } from '../state/usePlayHistory'
+import { validateSolve } from '../lib/validate'
 import { PlayerBoard } from './PlayerBoard'
 import { PersonaList } from './PersonaList'
 import type { PlaceMode } from './PersonaList'
@@ -22,7 +23,8 @@ interface PuzzlePlayerProps {
 }
 
 export function PuzzlePlayer({ puzzleId, onBack, onEdit }: PuzzlePlayerProps): JSX.Element {
-  const { library, toggleGuess, setAnswer, toggleCross, clearBoard, setMurderer } = useLibrary()
+  const { library, toggleGuess, setAnswer, toggleCross, clearBoard, setMurderer, setSolved } =
+    useLibrary()
 
   // The tool picked up for placing. Either a persona (its letter rides the cursor)
   // or the X tool (`crossActive`) — mutually exclusive. Cleared on Esc or when the
@@ -159,12 +161,47 @@ export function PuzzlePlayer({ puzzleId, onBack, onEdit }: PuzzlePlayerProps): J
   const suspects = suspectsOf(puzzle.personas)
   const murdererValue = suspects.some((s) => s.id === puzzle.murderer) ? puzzle.murderer! : ''
 
+  // Grade the whole solve against the author's answer key and report it. On a
+  // correct solve, flip the sticky "solved" badge (the green check by the name);
+  // every other outcome just explains what's still wrong via a popup.
+  function handleValidate(): void {
+    const result = validateSolve(puzzle!)
+    switch (result.status) {
+      case 'incomplete':
+        alert(
+          result.reason === 'accusation'
+            ? 'Name the murderer first — pick a suspect from “The murderer is…” above, then validate.'
+            : 'Not finished yet — commit an answer for every suspect and the victim on the board before validating.'
+        )
+        return
+      case 'conflict':
+        alert(
+          'This can’t be right: two or more people share the same row or column. Each person occupies a row and column of their own.'
+        )
+        return
+      case 'incorrect':
+        alert('Not quite — this solution isn’t correct yet. Keep deducing!')
+        return
+      case 'solved':
+        setSolved(puzzleId, true)
+        alert('🎉 Case solved! Everyone’s in the right place and you named the right murderer.')
+        return
+    }
+  }
+
   return (
     <div className="view player">
       <div className="view-head">
         <div className="view-head-left">
           <button type="button" className="btn btn-ghost" onClick={onBack}>← Back</button>
-          <h1 className="view-title">{puzzle.name}</h1>
+          <h1 className="view-title">
+            {puzzle.solved && (
+              <span className="solved-check" title="You’ve solved this case" aria-label="Solved">
+                ✓
+              </span>
+            )}
+            {puzzle.name}
+          </h1>
         </div>
         <div className="view-head-actions">
           <div className="undo-redo">
@@ -288,6 +325,16 @@ export function PuzzlePlayer({ puzzleId, onBack, onEdit }: PuzzlePlayerProps): J
                   )
                 })}
               </select>
+            </div>
+            <div className="validate-row">
+              <button type="button" className="btn btn-primary" onClick={handleValidate}>
+                Validate
+              </button>
+              {puzzle.solved && (
+                <span className="solved-flag">
+                  <span className="solved-check" aria-hidden="true">✓</span> Solved
+                </span>
+              )}
             </div>
           </div>
         </div>

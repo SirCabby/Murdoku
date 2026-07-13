@@ -196,6 +196,16 @@ export interface Puzzle {
    * `null`.
    */
   murderer: string | null
+  /**
+   * Whether the player has ever validated a fully-correct solve of this puzzle —
+   * every persona placed in the cell the answer key assigns them and the right
+   * suspect accused (see `lib/validate.ts`). Set true by the play-mode Validate
+   * button and thereafter sticky: a completion badge, not live play state, so it
+   * survives resetting the board and drives the green check shown before the
+   * puzzle's name in play mode and on the home page. The author never sets it;
+   * new and migrated puzzles start `false`.
+   */
+  solved: boolean
   createdAt: number
   updatedAt: number
 }
@@ -209,7 +219,7 @@ export interface Folder {
 
 /** The entire persisted library — one blob in localStorage / a save file. */
 export interface Library {
-  version: 14
+  version: 15
   folders: Folder[]
   puzzles: Record<string, Puzzle>
 }

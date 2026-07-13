@@ -98,7 +98,14 @@ export function HomeView({ onPlay, onEdit }: HomeViewProps): JSX.Element {
                 return (
                   <li key={pid} className="puzzle-card">
                     <button type="button" className="puzzle-card-main" onClick={() => onPlay(pid)}>
-                      <span className="puzzle-card-name">{puzzle.name}</span>
+                      <span className="puzzle-card-name">
+                        {puzzle.solved && (
+                          <span className="solved-check" title="Solved" aria-label="Solved">
+                            ✓
+                          </span>
+                        )}
+                        {puzzle.name}
+                      </span>
                       <span className="puzzle-card-meta">
                         {Object.keys(puzzle.cells).length} cells
                       </span>

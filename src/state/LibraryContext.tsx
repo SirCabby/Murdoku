@@ -100,6 +100,8 @@ export interface LibraryApi {
   removePersona: (puzzleId: string, id: string) => void
   /** Set (or clear, with `null`) the player's final accusation — always a suspect. */
   setMurderer: (puzzleId: string, personaId: string | null) => void
+  /** Set the sticky "solved" completion badge (flipped true by a correct Validate). */
+  setSolved: (puzzleId: string, solved: boolean) => void
   // Answer key (the author's definitive per-cell placement of the cast). Placing
   // keeps the key legal: one cell per persona, at most one per row and column (see
   // `lib/solution.ts`); re-placing the same persona in its cell clears it.
@@ -209,6 +211,7 @@ export function LibraryProvider({ children }: { children: ReactNode }): JSX.Elem
           murderer: null,
           solution: {},
           solutionMurderer: null,
+          solved: false,
           createdAt: now(),
           updatedAt: now(),
         }
@@ -459,6 +462,10 @@ export function LibraryProvider({ children }: { children: ReactNode }): JSX.Elem
           }
           return p.murderer === personaId ? p : { ...p, murderer: personaId }
         })
+      },
+
+      setSolved(puzzleId, solved) {
+        patchPuzzle(puzzleId, (p) => (p.solved === solved ? p : { ...p, solved }))
       },
 
       setSolution(puzzleId, x, y, personaId) {
