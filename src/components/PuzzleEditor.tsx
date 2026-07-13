@@ -8,6 +8,7 @@ import { ObjectsBoard } from './ObjectsBoard'
 import type { ObjectTool } from './ObjectsBoard'
 import { RoomsBoard } from './RoomsBoard'
 import { PersonasEditor } from './PersonasEditor'
+import { HintsEditor } from './HintsEditor'
 import { SolutionEditor } from './SolutionEditor'
 
 interface PuzzleEditorProps {
@@ -15,7 +16,7 @@ interface PuzzleEditorProps {
   onDone: () => void
 }
 
-type EditMode = 'shape' | 'walls' | 'objects' | 'rooms' | 'people' | 'solution'
+type EditMode = 'shape' | 'walls' | 'objects' | 'rooms' | 'people' | 'hints' | 'solution'
 
 /**
  * Defines a puzzle's shape and its room walls. Edits apply live to the library —
@@ -39,6 +40,10 @@ export function PuzzleEditor({ puzzleId, onDone }: PuzzleEditorProps): JSX.Eleme
     setLabelText,
     removeLabel,
     clearLabels,
+    addHint,
+    setHintText,
+    removeHint,
+    clearHints,
     addSuspect,
     setPersonaName,
     setPersonaDescription,
@@ -67,6 +72,7 @@ export function PuzzleEditor({ puzzleId, onDone }: PuzzleEditorProps): JSX.Eleme
   const objectCount = Object.keys(puzzle.objects).length
   const windowCount = Object.keys(puzzle.windows).length
   const labelCount = puzzle.labels.length
+  const hintCount = puzzle.hints.length
   const solutionCount = Object.keys(puzzle.solution).length
   const personaCount = puzzle.personas.length
 
@@ -136,6 +142,15 @@ export function PuzzleEditor({ puzzleId, onDone }: PuzzleEditorProps): JSX.Eleme
           onClick={() => setMode('people')}
         >
           People
+        </button>
+        <button
+          type="button"
+          role="tab"
+          aria-selected={mode === 'hints'}
+          className={`seg${mode === 'hints' ? ' active' : ''}`}
+          onClick={() => setMode('hints')}
+        >
+          Hints
         </button>
         <button
           type="button"
@@ -373,6 +388,39 @@ export function PuzzleEditor({ puzzleId, onDone }: PuzzleEditorProps): JSX.Eleme
             onSetName={(id, name) => setPersonaName(puzzleId, id, name)}
             onSetDescription={(id, description) => setPersonaDescription(puzzleId, id, description)}
             onRemove={(id) => removePersona(puzzleId, id)}
+          />
+        </>
+      )}
+
+      {mode === 'hints' && (
+        <>
+          <div className="toolbar">
+            <span className="toolbar-label">Hints</span>
+            <button
+              type="button"
+              className="btn btn-small btn-ghost"
+              disabled={hintCount === 0}
+              onClick={() => {
+                if (hintCount === 0 || confirm('Remove every hint from this puzzle?')) clearHints(puzzleId)
+              }}
+            >
+              Clear hints
+            </button>
+            <span className="toolbar-count">
+              {hintCount} hint{hintCount === 1 ? '' : 's'}
+            </span>
+          </div>
+
+          <p className="hint">
+            Write the puzzle's clues, one per card. Hints are numbered 1, 2, 3… in order; removing one
+            renumbers the rest. Use ✕ to delete a hint.
+          </p>
+
+          <HintsEditor
+            puzzle={puzzle}
+            onAddHint={() => addHint(puzzleId)}
+            onSetText={(id, text) => setHintText(puzzleId, id, text)}
+            onRemove={(id) => removeHint(puzzleId, id)}
           />
         </>
       )}

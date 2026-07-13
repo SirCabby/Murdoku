@@ -7,7 +7,7 @@ import {
   useState,
 } from 'react'
 import type { ReactNode } from 'react'
-import type { CellObjectKind, Folder, Library, Persona, Puzzle, RoomLabel } from '../types/puzzle'
+import type { CellObjectKind, Folder, Hint, Library, Persona, Puzzle, RoomLabel } from '../types/puzzle'
 import { loadLibrary, saveLibrary } from '../lib/storage'
 import { defaultPersonas, newSuspect, suspectsOf } from '../lib/personas'
 import {
@@ -88,6 +88,11 @@ export interface LibraryApi {
   setLabelText: (puzzleId: string, id: string, text: string) => void
   removeLabel: (puzzleId: string, id: string) => void
   clearLabels: (puzzleId: string) => void
+  // Hints (the author's ordered, numbered clues)
+  addHint: (puzzleId: string) => Hint
+  setHintText: (puzzleId: string, id: string, text: string) => void
+  removeHint: (puzzleId: string, id: string) => void
+  clearHints: (puzzleId: string) => void
   // Personas (cast of suspects + the victim)
   addSuspect: (puzzleId: string) => Persona
   setPersonaName: (puzzleId: string, id: string, name: string) => void
@@ -194,6 +199,7 @@ export function LibraryProvider({ children }: { children: ReactNode }): JSX.Elem
           objects: {},
           windows: {},
           labels: [],
+          hints: [],
           personas: defaultPersonas(),
           guesses: {},
           answers: {},
@@ -364,6 +370,31 @@ export function LibraryProvider({ children }: { children: ReactNode }): JSX.Elem
 
       clearLabels(puzzleId) {
         patchPuzzle(puzzleId, (p) => (p.labels.length === 0 ? p : { ...p, labels: [] }))
+      },
+
+      addHint(puzzleId) {
+        // Appended to the end so it takes the next number in sequence.
+        const hint: Hint = { id: newId(), text: '' }
+        patchPuzzle(puzzleId, (p) => ({ ...p, hints: [...p.hints, hint] }))
+        return hint
+      },
+
+      setHintText(puzzleId, id, text) {
+        patchPuzzle(puzzleId, (p) => ({
+          ...p,
+          hints: p.hints.map((h) => (h.id === id ? { ...h, text } : h)),
+        }))
+      },
+
+      removeHint(puzzleId, id) {
+        patchPuzzle(puzzleId, (p) => {
+          const hints = p.hints.filter((h) => h.id !== id)
+          return hints.length === p.hints.length ? p : { ...p, hints }
+        })
+      },
+
+      clearHints(puzzleId) {
+        patchPuzzle(puzzleId, (p) => (p.hints.length === 0 ? p : { ...p, hints: [] }))
       },
 
       addSuspect(puzzleId) {

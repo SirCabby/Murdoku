@@ -1,4 +1,4 @@
-import type { CellObjectKind, CellState, Folder, Library, Persona, Puzzle, RoomLabel } from '../types/puzzle'
+import type { CellObjectKind, CellState, Folder, Hint, Library, Persona, Puzzle, RoomLabel } from '../types/puzzle'
 import { cellKey } from './coords'
 import { wallKey } from './walls'
 import { snapLabelToRoomBottom } from './rooms'
@@ -10,10 +10,11 @@ import { newId } from './id'
 // will additionally sync this blob to the connected save file (see lib/gst.ts);
 // that hook is intentionally not wired up yet.
 
-const STORAGE_KEY = 'murdoku.library.v12'
+const STORAGE_KEY = 'murdoku.library.v13'
 // Older blobs still sitting in some users' storage, newest first. Each is
 // upgraded forward by `coerceLibrary` and then removed once read.
 const LEGACY_KEYS = [
+  'murdoku.library.v12',
   'murdoku.library.v11',
   'murdoku.library.v10',
   'murdoku.library.v9',
@@ -27,7 +28,7 @@ const LEGACY_KEYS = [
 ]
 
 export function emptyLibrary(): Library {
-  return { version: 12, folders: [], puzzles: {} }
+  return { version: 13, folders: [], puzzles: {} }
 }
 
 export function loadLibrary(): Library {
@@ -71,29 +72,30 @@ export function parseLibrary(text: string): Library {
 
 /**
  * Validate an already-parsed value and normalize it to the current Library
- * shape, or return null if it isn't one. Accepts the current version (12) and
+ * shape, or return null if it isn't one. Accepts the current version (13) and
  * upgrades older blobs forward one step at a time: v2 (no walls) → v3 (no
  * objects) → v4 (no room labels) → v5 (labels mid-cell) → v6 (labels snapped to
  * bottom walls) → v7 (no personas) → v8 (no persona guesses) → v9 (no persona
  * answers) → v10 (no crossed-out cells) → v11 (no murderer accusation) → v12 (no
- * answer key). Validation is shallow — the same trust level the app has always
- * applied to its own localStorage blob.
+ * answer key) → v13 (no hints). Validation is shallow — the same trust level the
+ * app has always applied to its own localStorage blob.
  */
 function coerceLibrary(value: unknown): Library | null {
   if (!value || typeof value !== 'object') return null
   const v = value as { version?: unknown; folders?: unknown }
   if (!Array.isArray(v.folders)) return null
-  if (v.version === 12) return value as Library
-  if (v.version === 11) return upgradeV11(value as LibraryV11)
-  if (v.version === 10) return upgradeV11(upgradeV10(value as LibraryV10))
-  if (v.version === 9) return upgradeV11(upgradeV10(upgradeV9(value as LibraryV9)))
-  if (v.version === 8) return upgradeV11(upgradeV10(upgradeV9(upgradeV8(value as LibraryV8))))
-  if (v.version === 7) return upgradeV11(upgradeV10(upgradeV9(upgradeV8(upgradeV7(value as LibraryV7)))))
-  if (v.version === 6) return upgradeV11(upgradeV10(upgradeV9(upgradeV8(upgradeV7(upgradeV6(value as LibraryV6))))))
-  if (v.version === 5) return upgradeV11(upgradeV10(upgradeV9(upgradeV8(upgradeV7(upgradeV6(upgradeV5(value as LibraryV5)))))))
-  if (v.version === 4) return upgradeV11(upgradeV10(upgradeV9(upgradeV8(upgradeV7(upgradeV6(upgradeV5(upgradeV4(value as LibraryV4))))))))
-  if (v.version === 3) return upgradeV11(upgradeV10(upgradeV9(upgradeV8(upgradeV7(upgradeV6(upgradeV5(upgradeV4(upgradeV3(value as LibraryV3)))))))))
-  if (v.version === 2) return upgradeV11(upgradeV10(upgradeV9(upgradeV8(upgradeV7(upgradeV6(upgradeV5(upgradeV4(upgradeV3(upgradeV2(value as LibraryV2))))))))))
+  if (v.version === 13) return value as Library
+  if (v.version === 12) return upgradeV12(value as LibraryV12)
+  if (v.version === 11) return upgradeV12(upgradeV11(value as LibraryV11))
+  if (v.version === 10) return upgradeV12(upgradeV11(upgradeV10(value as LibraryV10)))
+  if (v.version === 9) return upgradeV12(upgradeV11(upgradeV10(upgradeV9(value as LibraryV9))))
+  if (v.version === 8) return upgradeV12(upgradeV11(upgradeV10(upgradeV9(upgradeV8(value as LibraryV8)))))
+  if (v.version === 7) return upgradeV12(upgradeV11(upgradeV10(upgradeV9(upgradeV8(upgradeV7(value as LibraryV7))))))
+  if (v.version === 6) return upgradeV12(upgradeV11(upgradeV10(upgradeV9(upgradeV8(upgradeV7(upgradeV6(value as LibraryV6)))))))
+  if (v.version === 5) return upgradeV12(upgradeV11(upgradeV10(upgradeV9(upgradeV8(upgradeV7(upgradeV6(upgradeV5(value as LibraryV5))))))))
+  if (v.version === 4) return upgradeV12(upgradeV11(upgradeV10(upgradeV9(upgradeV8(upgradeV7(upgradeV6(upgradeV5(upgradeV4(value as LibraryV4)))))))))
+  if (v.version === 3) return upgradeV12(upgradeV11(upgradeV10(upgradeV9(upgradeV8(upgradeV7(upgradeV6(upgradeV5(upgradeV4(upgradeV3(value as LibraryV3))))))))))
+  if (v.version === 2) return upgradeV12(upgradeV11(upgradeV10(upgradeV9(upgradeV8(upgradeV7(upgradeV6(upgradeV5(upgradeV4(upgradeV3(upgradeV2(value as LibraryV2)))))))))))
   return null
 }
 
@@ -211,12 +213,25 @@ function upgradeV10(old: LibraryV10): LibraryV11 {
  * is authoring content that predates this version, so every migrated puzzle starts
  * with none — the author fills it in from the editor's Answer key tab.
  */
-function upgradeV11(old: LibraryV11): Library {
-  const puzzles: Record<string, Puzzle> = {}
+function upgradeV11(old: LibraryV11): LibraryV12 {
+  const puzzles: Record<string, PuzzleV12> = {}
   for (const [id, p] of Object.entries(old.puzzles)) {
     puzzles[id] = { ...p, solution: {} }
   }
   return { version: 12, folders: old.folders, puzzles }
+}
+
+/**
+ * Add an empty `hints` list to every puzzle, taking v12 to v13. Hints are
+ * authoring content that predates this version, so every migrated puzzle starts
+ * with none — the author writes them in the editor's Hints tab.
+ */
+function upgradeV12(old: LibraryV12): Library {
+  const puzzles: Record<string, Puzzle> = {}
+  for (const [id, p] of Object.entries(old.puzzles)) {
+    puzzles[id] = { ...p, hints: [] }
+  }
+  return { version: 13, folders: old.folders, puzzles }
 }
 
 /** A pre-walls (version 2) puzzle, as it still sits in some users' storage. */
@@ -335,6 +350,17 @@ interface LibraryV11 {
   puzzles: Record<string, PuzzleV11>
 }
 
+/** A version-12 puzzle — has an answer key but no authored hints yet. */
+interface PuzzleV12 extends PuzzleV11 {
+  solution: Record<string, string>
+}
+
+interface LibraryV12 {
+  version: 12
+  folders: Folder[]
+  puzzles: Record<string, PuzzleV12>
+}
+
 export function saveLibrary(library: Library): void {
   try {
     localStorage.setItem(STORAGE_KEY, JSON.stringify(library))
@@ -451,11 +477,17 @@ function seedLibrary(): Library {
     [cellKey(2, 2)]: boddy.id,
   }
 
+  // A couple of authored hints, numbered 1 and 2 by order, showing the Hints tab.
+  const hints: Hint[] = [
+    { id: newId(), text: 'The victim was found in the parlor.' },
+    { id: newId(), text: 'Colonel Mustard was never in the bedroom.' },
+  ]
+
   const puzzleId = newId()
   const folderId = newId()
 
   return {
-    version: 12,
+    version: 13,
     folders: [{ id: folderId, name: 'My Cases', puzzleIds: [puzzleId] }],
     puzzles: {
       [puzzleId]: {
@@ -466,6 +498,7 @@ function seedLibrary(): Library {
         objects,
         windows,
         labels,
+        hints,
         personas,
         guesses,
         answers,

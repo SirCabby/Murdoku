@@ -56,6 +56,19 @@ export interface RoomLabel {
   y: number
 }
 
+/**
+ * An authored hint: one numbered clue the puzzle offers. Hints display in order,
+ * numbered 1, 2, 3, … by their position in `Puzzle.hints` — the number is derived
+ * at render, never stored, the same way persona letters are. Only `id` is stable,
+ * so removing a hint renumbers the survivors without disturbing which text belongs
+ * to which one.
+ */
+export interface Hint {
+  id: string
+  /** The hint's text. Empty string until the author fills it in. */
+  text: string
+}
+
 /** A persona is either one of the puzzle's suspects or its single victim. */
 export type PersonaRole = 'suspect' | 'victim'
 
@@ -111,6 +124,12 @@ export interface Puzzle {
    * survives shape and wall edits and can be slid freely along the walls.
    */
   labels: RoomLabel[]
+  /**
+   * The author's hints: an ordered list of clues, numbered 1, 2, 3, … by their
+   * position (see `Hint`). Authoring content, independent of the shape and cast;
+   * the author writes them in the editor's Hints tab.
+   */
+  hints: Hint[]
   /**
    * The puzzle's cast: one or more suspects plus exactly one victim. Order among
    * the suspects sets their derived letters (see `Persona`); the array as a whole
@@ -181,7 +200,7 @@ export interface Folder {
 
 /** The entire persisted library — one blob in localStorage / a save file. */
 export interface Library {
-  version: 12
+  version: 13
   folders: Folder[]
   puzzles: Record<string, Puzzle>
 }
