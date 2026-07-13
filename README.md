@@ -1,48 +1,61 @@
 # Murdoku
 
-A **companion site for [GameStateTracker](../GameStateTracker)** for playing
-Murdle-style logic-grid deduction puzzles. Set up a grid, drop your guesses into
-the boxes (✓ / ✗ / notes), and revise as you deduce — no eraser required.
+A static web app for playing — and building — Murdle-style **murder-mystery logic
+puzzles**. Each case is a floor plan (rooms, walls, windows and furniture) with a
+cast of suspects and one victim. Deduce where everyone was, then unmask the
+murderer, one clue at a time.
 
-It runs two ways:
+### ▶ [Play it now](https://sircabby.github.io/Murdoku/)
 
-- **Standalone** — open it on its own; your library autosaves in the browser
-  (`localStorage`), and you can also **save it to a file you choose** (see
-  [Saving your library](#saving-your-library)).
-- **Inside GameStateTracker** — served from `companion-sites/<id>/` and opened
-  from a game's save. When launched that way it detects the connection (see
-  [GameStateTracker integration](#gamestatetracker-integration)).
+A sample case ships with the app to get you started. Your own puzzles autosave in
+the browser (`localStorage`), and you can also **save them to a file you choose**
+(see [Saving your library](#saving-your-library)).
 
-## Quick start
+## How to play
 
-```bash
-npm install
-npm run dev        # dev server with hot reload
-npm run build      # type-check + emit static site to dist/
-npm run preview    # serve the built dist/ locally
-npm run typecheck  # tsc --noEmit only
-```
+Open a case from the home screen (a **Sample Shape** puzzle is included). The
+board is a floor plan; the cast is listed down the side as lettered **suspects**
+(A, B, C…) plus the **victim** (V). Each person was in exactly one place — their
+own row and column of the board — and your job is to place everyone, then name
+the killer.
 
-## What "playing" looks like
+1. **Read the hints.** The panel beside the board holds the clues you reason from.
+2. **Pick someone up, then click a cell to place them.** Click a suspect (or the
+   victim) in the side list; the mode dropdown decides how a click lands:
+   - **Guess** — a tentative mark; drawn as a small letter, and a cell can hold
+     several. Click the same cell again to remove it.
+   - **Answer** — your committed placement; fills the cell with one big letter.
+   - Hold **Shift** to momentarily flip between the two; press **Esc** to put the
+     person back down.
+3. **Rule cells out.** Pick up the **✗ tool** and click a cell to cross it off.
+   Furniture (a table, a bed…) fills its square, so nobody can stand there.
+4. **Let it tidy up (optional).** With **Clean up: Automatic**, committing an
+   answer automatically crosses out the rest of that person's row and column.
+5. **Name the murderer.** Choose a suspect from **“The murderer is…”** below the
+   board.
+6. **Check yourself.** **Validate** grades the whole solve — get it right and a
+   sticky green ✓ appears by the puzzle's name. Stuck? **Show errors** reddens the
+   committed answers that don't match, and **Show answer key** reveals the
+   author's solution.
 
-1. **Home** — folders hold puzzles. Create a folder, add a puzzle.
-2. **Edit** — define the puzzle's categories (e.g. Suspects, Weapons,
-   Locations) and the items in each. Logic grids normally use the same number of
-   items in every category.
-3. **Play** — the categories are laid out as the classic staircase grid where
-   every pair of categories meets in a block of cells:
-   - **Left-click** a cell to cycle it: blank → ✗ (ruled out) → ✓ (confirmed).
-   - **Right-click** a cell to attach a scratch note.
-   - **Auto-✗ row & column** (on by default): confirming a pairing with ✓
-     automatically rules out the rest of that pairing's row and column.
+Handy extras: **Undo / Redo** (Ctrl+Z / Ctrl+Y), **Reset board**, **Summaries**
+(lists who's in each row and column around the edges), and **Highlight** (the
+picked-up person's existing marks glow orange).
+
+## Build your own puzzle
+
+Press **Edit puzzle** (or add a new one from the home screen) to author a case:
+lay out the floor plan and interior **walls**, drop in **furniture**, **windows**
+and **room names**, define the **cast**, write the **hints**, and set the
+**solution** the validator grades against.
 
 ## Saving your library
 
-Your whole library (folders → puzzles → cells → walls → objects → room names) is one JSON blob. It
-autosaves to the browser's `localStorage` on every edit, so nothing is lost on a
-refresh. But `localStorage` is tied to one browser on one origin — puzzles made
-on the dev server won't appear in the built site, and clearing site data wipes
-them. To keep a durable, portable copy you control, use the bar at the top:
+Your whole library (folders → puzzles → boards → cast → hints → solutions) is one
+JSON blob. It autosaves to the browser's `localStorage` on every edit, so nothing
+is lost on a refresh. But `localStorage` is tied to one browser on one origin, and
+clearing site data wipes it. To keep a durable, portable copy you control, use the
+bar at the top:
 
 - **Save to file…** — pick a location and start auto-saving there. Every edit is
   written back to that `.murdoku` file (it's plain JSON). The file you picked is
@@ -59,67 +72,40 @@ Chromium browsers). On Firefox/Safari the bar falls back to **Download file** /
 `.murdoku` files are your own puzzle data and are git-ignored — they're never
 committed even if you save one inside this repo.
 
-## Architecture
+## Development
 
-Static React + TypeScript + Vite app. No backend — the whole library is a
-single JSON blob.
+Static React + TypeScript + Vite app. No backend — the whole library is a single
+JSON blob in `localStorage` (optionally mirrored to a `.murdoku` file).
+
+```bash
+npm install
+npm run dev        # dev server with hot reload
+npm run build      # type-check + emit static site to dist/
+npm run preview    # serve the built dist/ locally
+npm run typecheck  # tsc --noEmit only
+```
+
+Pushing to `main` builds and publishes `dist/` to GitHub Pages via
+`.github/workflows/deploy.yml`.
 
 ```
 src/
-  types/puzzle.ts        Domain model: Library, Folder, Puzzle, Category, Item, CellState
-  lib/
-    gridLayout.ts        The staircase layout algorithm (pairs → blocks)
-    marks.ts             Applying marks + the auto-eliminate rule (pure)
-    cells.ts             Canonical pair keys + mark cycling
-    storage.ts           localStorage persistence + first-run seed
-    gst.ts               Parses the GameStateTracker connection from the URL
-    id.ts                Id generation
-  state/LibraryContext.tsx   React store; every mutation persists
+  types/puzzle.ts            Domain model: Library, Folder, Puzzle, Persona, and the
+                             board maps (cells, walls, objects, labels, hints,
+                             guesses, answers, crosses, solution)
+  lib/                       Pure, side-effect-free logic (independently testable):
+    board.ts, coords.ts        the cell lattice + coordinate / pair-key helpers
+    walls.ts, rooms.ts         wall edges and wall-based room flood fill
+    objects.ts, objectAssets.ts  furniture / window placement + vendored icons
+    personas.ts                suspects + victim, derived A / B / C / V labels
+    guesses.ts, answers.ts, crosses.ts   the player's per-cell marks
+    solution.ts, validate.ts   the author's answer key + grading a solve
+    storage.ts, fileStore.ts, handleDb.ts   localStorage + File System Access saves
+    history.ts, prefs.ts, id.ts   undo history, view prefs, id generation
+  state/                     React stores: LibraryContext, file sync, play history
   components/
-    HomeView.tsx         Folder / puzzle browser
-    PuzzleEditor.tsx     Define categories & items
-    PuzzlePlayer.tsx     Controls + grid
-    Grid.tsx             Renders the staircase
-    Cell.tsx             One square (mark + note popover)
+    HomeView.tsx             folder / puzzle browser
+    PuzzleEditor.tsx + *Board/Editor   author the board, cast, hints, solution
+    PuzzlePlayer.tsx + PlayerBoard, PersonaList, HintsPanel   play a case
+    Cell.tsx, BoardDecor.tsx, FileBar.tsx   a square, its decor, the save bar
 ```
-
-The layout rule: for `C` categories, column groups are `categories[1..C-1]`
-and row groups are `[categories[0], categories[C-1], categories[C-2], …]`; a
-block exists at `(r, c)` iff `r + c ≤ C-2`. That produces the triangular grid
-where the last category appears twice so every unordered pair shows once.
-
-## GameStateTracker integration
-
-GameStateTracker serves a companion site from `companion-sites/<folder>/` and,
-when you open it from a save, appends a URL built from a **URL template** you
-configure on the site's record. It supports these placeholders: `{GAME_ID}`,
-`{SAVE_ID}`, `{SAVE_NAME}`, `{SAVE_URL}`, `{FOLDER_URL}`, `{SAVE_ROOT_URL}`.
-
-To wire Murdoku up, point the site at this repo's built `dist/` (via the
-"local path" field) and set the **URL template** to:
-
-```
-?gst=1&gameId={GAME_ID}&saveId={SAVE_ID}&saveName={SAVE_NAME}&saveUrl={SAVE_URL}&folderUrl={FOLDER_URL}&rootUrl={SAVE_ROOT_URL}
-```
-
-Murdoku reads those params (`src/lib/gst.ts`) and shows a "Connected to
-GameStateTracker" banner. Because the site is served under a sub-path, the Vite
-build uses `base: './'` so asset URLs stay relative.
-
-### Deploying into GameStateTracker
-
-```bash
-npm run build
-# then copy dist/ into GameStateTracker, e.g.
-#   GameStateTracker/companion-sites/murdoku/   (contents of dist/)
-# or point the site's "local path" at this repo's dist/ directly.
-```
-
-## Roadmap (next steps)
-
-- Sync the library to the connected GameStateTracker save file (currently
-  localStorage only).
-- Full transitive constraint propagation (cross-category deductions), not just
-  per-block row/column elimination.
-- Compact the header labels / optional zoom for large grids.
-- Import/export a puzzle definition.

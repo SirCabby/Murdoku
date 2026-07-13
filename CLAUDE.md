@@ -27,9 +27,9 @@ puzzles). Read it every session.
 
 ## Rules specific to this repo
 
-- **Keep `base: './'` in `vite.config.ts`.** The site is served from a sub-path
-  (`/companion-sites/<id>/`) inside GameStateTracker; absolute asset paths 404
-  there.
+- **Keep `base: './'` in `vite.config.ts`.** The site is served from sub-paths —
+  `/Murdoku/` on GitHub Pages and `/companion-sites/<id>/` inside GameStateTracker;
+  absolute asset paths 404 there.
 - **Pure logic stays pure.** `lib/gridLayout.ts`, `lib/marks.ts`, `lib/cells.ts`
   are side-effect-free and independently testable — keep React out of them.
 - **The grid layout contract:** for `C` categories, block `(r, c)` exists iff
@@ -40,8 +40,10 @@ puzzles). Read it every session.
   Always go through it; never hand-build a `"catId:itemId|…"` string.
 - **Item ids are stable across relabels.** The editor preserves ids so existing
   marks survive renaming an item. Don't regenerate ids on edit.
-- After changing the GameStateTracker URL-param contract (`src/lib/gst.ts`),
-  update the template documented in `README.md`.
+- **The GameStateTracker URL-param contract lives in `src/lib/gst.ts`**
+  (`?gst=1&gameId=…&saveId=…&…`) — that's the sole source of truth. The README no
+  longer documents it (it presents Murdoku as a standalone site), so there's no
+  external copy to keep in sync when the contract changes.
 
 ## Verify before reporting done
 
