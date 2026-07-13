@@ -217,6 +217,17 @@ body {
 .cell-no { color: var(--no-fg); }
 .cell-yes { background: var(--yes-bg); color: var(--yes-fg); font-weight: 700; }
 .cell-glyph { line-height: 1; pointer-events: none; }
+
+/* Play cells sit on the same warm room floor the editor lays its cells on, so a
+   room reads the same at play as in the editor — objects/windows draw over it and
+   the deduction marks still overlay. The floor is theme-independent, so the base
+   ink and the ✗ are pinned to colours that stay legible on the tan; the ✓ keeps
+   its own green fill (re-asserted here so the floor rule can't override it). */
+.player-board .cell { background: var(--floor); border-color: var(--floor-line); color: #2a2118; }
+.player-board .cell:hover { background: var(--floor-hi); }
+.player-board .cell-readonly:hover { background: var(--floor); }
+.player-board .cell-no { color: #a5342a; }
+.player-board .cell-yes { background: var(--yes-bg); color: var(--yes-fg); }
 .cell-note-dot { position: absolute; top: 2px; right: 2px; width: 6px; height: 6px; border-radius: 50%; background: var(--note); }
 
 /* ---- Walls (room boundaries) ---- */
