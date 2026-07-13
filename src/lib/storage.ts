@@ -1,4 +1,4 @@
-import type { CellObjectKind, CellState, Folder, Hint, Library, Persona, Puzzle, RoomLabel } from '../types/puzzle'
+import type { CellObjectKind, CellState, Clue, Folder, Hint, Library, Persona, Puzzle, RoomLabel } from '../types/puzzle'
 import { cellKey } from './coords'
 import { wallKey } from './walls'
 import { snapLabelToRoomBottom } from './rooms'
@@ -10,10 +10,11 @@ import { newId } from './id'
 // will additionally sync this blob to the connected save file (see lib/gst.ts);
 // that hook is intentionally not wired up yet.
 
-const STORAGE_KEY = 'murdoku.library.v15'
+const STORAGE_KEY = 'murdoku.library.v16'
 // Older blobs still sitting in some users' storage, newest first. Each is
 // upgraded forward by `coerceLibrary` and then removed once read.
 const LEGACY_KEYS = [
+  'murdoku.library.v15',
   'murdoku.library.v14',
   'murdoku.library.v13',
   'murdoku.library.v12',
@@ -30,7 +31,7 @@ const LEGACY_KEYS = [
 ]
 
 export function emptyLibrary(): Library {
-  return { version: 15, folders: [], puzzles: {} }
+  return { version: 16, folders: [], puzzles: {} }
 }
 
 export function loadLibrary(): Library {
@@ -74,33 +75,34 @@ export function parseLibrary(text: string): Library {
 
 /**
  * Validate an already-parsed value and normalize it to the current Library
- * shape, or return null if it isn't one. Accepts the current version (15) and
+ * shape, or return null if it isn't one. Accepts the current version (16) and
  * upgrades older blobs forward one step at a time: v2 (no walls) → v3 (no
  * objects) → v4 (no room labels) → v5 (labels mid-cell) → v6 (labels snapped to
  * bottom walls) → v7 (no personas) → v8 (no persona guesses) → v9 (no persona
  * answers) → v10 (no crossed-out cells) → v11 (no murderer accusation) → v12 (no
  * answer key) → v13 (no hints) → v14 (no answer-key murderer) → v15 (no solved
- * badge). Validation is shallow — the same trust level the app has always
- * applied to its own localStorage blob.
+ * badge) → v16 (no room clues). Validation is shallow — the same trust level the
+ * app has always applied to its own localStorage blob.
  */
 function coerceLibrary(value: unknown): Library | null {
   if (!value || typeof value !== 'object') return null
   const v = value as { version?: unknown; folders?: unknown }
   if (!Array.isArray(v.folders)) return null
-  if (v.version === 15) return value as Library
-  if (v.version === 14) return upgradeV14(value as LibraryV14)
-  if (v.version === 13) return upgradeV14(upgradeV13(value as LibraryV13))
-  if (v.version === 12) return upgradeV14(upgradeV13(upgradeV12(value as LibraryV12)))
-  if (v.version === 11) return upgradeV14(upgradeV13(upgradeV12(upgradeV11(value as LibraryV11))))
-  if (v.version === 10) return upgradeV14(upgradeV13(upgradeV12(upgradeV11(upgradeV10(value as LibraryV10)))))
-  if (v.version === 9) return upgradeV14(upgradeV13(upgradeV12(upgradeV11(upgradeV10(upgradeV9(value as LibraryV9))))))
-  if (v.version === 8) return upgradeV14(upgradeV13(upgradeV12(upgradeV11(upgradeV10(upgradeV9(upgradeV8(value as LibraryV8)))))))
-  if (v.version === 7) return upgradeV14(upgradeV13(upgradeV12(upgradeV11(upgradeV10(upgradeV9(upgradeV8(upgradeV7(value as LibraryV7))))))))
-  if (v.version === 6) return upgradeV14(upgradeV13(upgradeV12(upgradeV11(upgradeV10(upgradeV9(upgradeV8(upgradeV7(upgradeV6(value as LibraryV6)))))))))
-  if (v.version === 5) return upgradeV14(upgradeV13(upgradeV12(upgradeV11(upgradeV10(upgradeV9(upgradeV8(upgradeV7(upgradeV6(upgradeV5(value as LibraryV5))))))))))
-  if (v.version === 4) return upgradeV14(upgradeV13(upgradeV12(upgradeV11(upgradeV10(upgradeV9(upgradeV8(upgradeV7(upgradeV6(upgradeV5(upgradeV4(value as LibraryV4)))))))))))
-  if (v.version === 3) return upgradeV14(upgradeV13(upgradeV12(upgradeV11(upgradeV10(upgradeV9(upgradeV8(upgradeV7(upgradeV6(upgradeV5(upgradeV4(upgradeV3(value as LibraryV3))))))))))))
-  if (v.version === 2) return upgradeV14(upgradeV13(upgradeV12(upgradeV11(upgradeV10(upgradeV9(upgradeV8(upgradeV7(upgradeV6(upgradeV5(upgradeV4(upgradeV3(upgradeV2(value as LibraryV2)))))))))))))
+  if (v.version === 16) return value as Library
+  if (v.version === 15) return upgradeV15(value as LibraryV15)
+  if (v.version === 14) return upgradeV15(upgradeV14(value as LibraryV14))
+  if (v.version === 13) return upgradeV15(upgradeV14(upgradeV13(value as LibraryV13)))
+  if (v.version === 12) return upgradeV15(upgradeV14(upgradeV13(upgradeV12(value as LibraryV12))))
+  if (v.version === 11) return upgradeV15(upgradeV14(upgradeV13(upgradeV12(upgradeV11(value as LibraryV11)))))
+  if (v.version === 10) return upgradeV15(upgradeV14(upgradeV13(upgradeV12(upgradeV11(upgradeV10(value as LibraryV10))))))
+  if (v.version === 9) return upgradeV15(upgradeV14(upgradeV13(upgradeV12(upgradeV11(upgradeV10(upgradeV9(value as LibraryV9)))))))
+  if (v.version === 8) return upgradeV15(upgradeV14(upgradeV13(upgradeV12(upgradeV11(upgradeV10(upgradeV9(upgradeV8(value as LibraryV8))))))))
+  if (v.version === 7) return upgradeV15(upgradeV14(upgradeV13(upgradeV12(upgradeV11(upgradeV10(upgradeV9(upgradeV8(upgradeV7(value as LibraryV7)))))))))
+  if (v.version === 6) return upgradeV15(upgradeV14(upgradeV13(upgradeV12(upgradeV11(upgradeV10(upgradeV9(upgradeV8(upgradeV7(upgradeV6(value as LibraryV6))))))))))
+  if (v.version === 5) return upgradeV15(upgradeV14(upgradeV13(upgradeV12(upgradeV11(upgradeV10(upgradeV9(upgradeV8(upgradeV7(upgradeV6(upgradeV5(value as LibraryV5)))))))))))
+  if (v.version === 4) return upgradeV15(upgradeV14(upgradeV13(upgradeV12(upgradeV11(upgradeV10(upgradeV9(upgradeV8(upgradeV7(upgradeV6(upgradeV5(upgradeV4(value as LibraryV4))))))))))))
+  if (v.version === 3) return upgradeV15(upgradeV14(upgradeV13(upgradeV12(upgradeV11(upgradeV10(upgradeV9(upgradeV8(upgradeV7(upgradeV6(upgradeV5(upgradeV4(upgradeV3(value as LibraryV3)))))))))))))
+  if (v.version === 2) return upgradeV15(upgradeV14(upgradeV13(upgradeV12(upgradeV11(upgradeV10(upgradeV9(upgradeV8(upgradeV7(upgradeV6(upgradeV5(upgradeV4(upgradeV3(upgradeV2(value as LibraryV2))))))))))))))
   return null
 }
 
@@ -259,12 +261,25 @@ function upgradeV13(old: LibraryV13): LibraryV14 {
  * puzzle starts unsolved — it flips true the first time the player validates a
  * correct solve.
  */
-function upgradeV14(old: LibraryV14): Library {
-  const puzzles: Record<string, Puzzle> = {}
+function upgradeV14(old: LibraryV14): LibraryV15 {
+  const puzzles: Record<string, PuzzleV15> = {}
   for (const [id, p] of Object.entries(old.puzzles)) {
     puzzles[id] = { ...p, solved: false }
   }
   return { version: 15, folders: old.folders, puzzles }
+}
+
+/**
+ * Add an empty `clues` list to every puzzle, taking v15 to v16. Room clues are
+ * authoring content that predates this version, so every migrated puzzle starts
+ * with none — the author writes them in the editor's People tab.
+ */
+function upgradeV15(old: LibraryV15): Library {
+  const puzzles: Record<string, Puzzle> = {}
+  for (const [id, p] of Object.entries(old.puzzles)) {
+    puzzles[id] = { ...p, clues: [] }
+  }
+  return { version: 16, folders: old.folders, puzzles }
 }
 
 /** A pre-walls (version 2) puzzle, as it still sits in some users' storage. */
@@ -416,6 +431,17 @@ interface LibraryV14 {
   puzzles: Record<string, PuzzleV14>
 }
 
+/** A version-15 puzzle — has a solved badge but no room clues yet. */
+interface PuzzleV15 extends PuzzleV14 {
+  solved: boolean
+}
+
+interface LibraryV15 {
+  version: 15
+  folders: Folder[]
+  puzzles: Record<string, PuzzleV15>
+}
+
 export function saveLibrary(library: Library): void {
   try {
     localStorage.setItem(STORAGE_KEY, JSON.stringify(library))
@@ -542,11 +568,16 @@ function seedLibrary(): Library {
     { id: newId(), text: 'Colonel Mustard was never in the bedroom.' },
   ]
 
+  // An extra room clue that names no one — shown on a green card in the cast panel.
+  const clues: Clue[] = [
+    { id: newId(), text: 'A muddy footprint was found just inside the parlor door.' },
+  ]
+
   const puzzleId = newId()
   const folderId = newId()
 
   return {
-    version: 15,
+    version: 16,
     folders: [{ id: folderId, name: 'My Cases', puzzleIds: [puzzleId] }],
     puzzles: {
       [puzzleId]: {
@@ -559,6 +590,7 @@ function seedLibrary(): Library {
         labels,
         hints,
         personas,
+        clues,
         guesses,
         answers,
         crosses,

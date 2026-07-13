@@ -70,6 +70,19 @@ export interface Hint {
   text: string
 }
 
+/**
+ * An extra clue tied to a room rather than to any cast member — a stray fact the
+ * puzzle offers ("a muddy footprint by the door") that names no persona. Clues are
+ * authoring content shown to the player alongside the cast, set apart from the
+ * suspects and victim by a green card. Like a hint it's just a piece of text; only
+ * `id` is stable, so removing one never disturbs the others.
+ */
+export interface Clue {
+  id: string
+  /** The clue's text. Empty string until the author fills it in. */
+  text: string
+}
+
 /** A persona is either one of the puzzle's suspects or its single victim. */
 export type PersonaRole = 'suspect' | 'victim'
 
@@ -137,6 +150,13 @@ export interface Puzzle {
    * has no spatial meaning, unlike the maps above.
    */
   personas: Persona[]
+  /**
+   * Extra room-bound clues that name no cast member (see `Clue`). Authoring
+   * content like `hints`, but surfaced in the play-mode cast panel — below the
+   * victim, on green cards — rather than in the hint dispenser. Independent of the
+   * shape and the cast; the author writes them in the editor's People tab.
+   */
+  clues: Clue[]
   /**
    * The player's placement guesses: which personas they think occupy each cell.
    * Keyed by `"x,y"` (always an existing cell) to an array of persona ids; a cell
@@ -220,7 +240,7 @@ export interface Folder {
 
 /** The entire persisted library — one blob in localStorage / a save file. */
 export interface Library {
-  version: 15
+  version: 16
   folders: Folder[]
   puzzles: Record<string, Puzzle>
 }

@@ -7,7 +7,7 @@ import {
   useState,
 } from 'react'
 import type { ReactNode } from 'react'
-import type { CellObjectKind, Folder, Hint, Library, Persona, Puzzle, RoomLabel } from '../types/puzzle'
+import type { CellObjectKind, Clue, Folder, Hint, Library, Persona, Puzzle, RoomLabel } from '../types/puzzle'
 import { loadLibrary, saveLibrary } from '../lib/storage'
 import { defaultPersonas, newSuspect, suspectsOf } from '../lib/personas'
 import {
@@ -102,6 +102,11 @@ export interface LibraryApi {
   setHintText: (puzzleId: string, id: string, text: string) => void
   removeHint: (puzzleId: string, id: string) => void
   clearHints: (puzzleId: string) => void
+  // Clues (extra room-bound facts shown beside the cast, naming no persona)
+  addClue: (puzzleId: string) => Clue
+  setClueText: (puzzleId: string, id: string, text: string) => void
+  removeClue: (puzzleId: string, id: string) => void
+  clearClues: (puzzleId: string) => void
   // Personas (cast of suspects + the victim)
   addSuspect: (puzzleId: string) => Persona
   setPersonaName: (puzzleId: string, id: string, name: string) => void
@@ -245,6 +250,7 @@ export function LibraryProvider({ children }: { children: ReactNode }): JSX.Elem
           labels: [],
           hints: [],
           personas: defaultPersonas(),
+          clues: [],
           guesses: {},
           answers: {},
           crosses: {},
@@ -441,6 +447,31 @@ export function LibraryProvider({ children }: { children: ReactNode }): JSX.Elem
 
       clearHints(puzzleId) {
         patchPuzzle(puzzleId, (p) => (p.hints.length === 0 ? p : { ...p, hints: [] }))
+      },
+
+      addClue(puzzleId) {
+        // Appended to the end so it slots after the existing clues in the panel.
+        const clue: Clue = { id: newId(), text: '' }
+        patchPuzzle(puzzleId, (p) => ({ ...p, clues: [...p.clues, clue] }))
+        return clue
+      },
+
+      setClueText(puzzleId, id, text) {
+        patchPuzzle(puzzleId, (p) => ({
+          ...p,
+          clues: p.clues.map((c) => (c.id === id ? { ...c, text } : c)),
+        }))
+      },
+
+      removeClue(puzzleId, id) {
+        patchPuzzle(puzzleId, (p) => {
+          const clues = p.clues.filter((c) => c.id !== id)
+          return clues.length === p.clues.length ? p : { ...p, clues }
+        })
+      },
+
+      clearClues(puzzleId) {
+        patchPuzzle(puzzleId, (p) => (p.clues.length === 0 ? p : { ...p, clues: [] }))
       },
 
       addSuspect(puzzleId) {

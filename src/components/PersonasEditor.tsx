@@ -1,5 +1,5 @@
 import { useRef } from 'react'
-import type { Persona, Puzzle } from '../types/puzzle'
+import type { Clue, Persona, Puzzle } from '../types/puzzle'
 import { personaLabel, suspectsOf, victimOf } from '../lib/personas'
 
 interface PersonasEditorProps {
@@ -9,14 +9,19 @@ interface PersonasEditorProps {
   onSetName: (id: string, name: string) => void
   onSetDescription: (id: string, description: string) => void
   onRemove: (id: string) => void
+  /** Append a new room clue; returns it so its text field can grab focus. */
+  onAddClue: () => Clue
+  onSetClueText: (id: string, text: string) => void
+  onRemoveClue: (id: string) => void
 }
 
 /**
- * The People tab: the puzzle's cast as two plain sections — the suspects (each a
- * card lettered A, B, C, … by order, add/remove enabled) and the single victim
- * (labelled V, permanent). Unlike the other edit modes there's no board; a cast
- * is independent of the shape, so this renders even before any cells exist.
- * Labels are derived on the fly from the list (see `lib/personas.ts`).
+ * The People tab: the puzzle's cast as three plain sections — the suspects (each a
+ * card lettered A, B, C, … by order, add/remove enabled), the single victim
+ * (labelled V, permanent), and any extra room clues (green cards that name no one).
+ * Unlike the other edit modes there's no board; a cast is independent of the shape,
+ * so this renders even before any cells exist. Labels are derived on the fly from
+ * the list (see `lib/personas.ts`).
  */
 export function PersonasEditor({
   puzzle,
@@ -24,18 +29,28 @@ export function PersonasEditor({
   onSetName,
   onSetDescription,
   onRemove,
+  onAddClue,
+  onSetClueText,
+  onRemoveClue,
 }: PersonasEditorProps): JSX.Element {
-  // A freshly added suspect asks its name input to grab focus once, so the
-  // author can start typing straight away (mirrors the room-label editor).
+  // A freshly added suspect or clue asks its first field to grab focus once, so the
+  // author can start typing straight away (mirrors the room-label editor). Ids are
+  // globally unique, so one ref serves both the name inputs and the clue textareas.
   const focusId = useRef<string | null>(null)
 
   const suspects = suspectsOf(puzzle.personas)
   const victim = victimOf(puzzle.personas)
+  const clues = puzzle.clues
   const canRemove = suspects.length > 1
 
   function addSuspect(): void {
     const suspect = onAddSuspect()
     focusId.current = suspect.id
+  }
+
+  function addClue(): void {
+    const clue = onAddClue()
+    focusId.current = clue.id
   }
 
   function card(persona: Persona): JSX.Element {
@@ -84,6 +99,41 @@ export function PersonasEditor({
     )
   }
 
+  function clueCard(clue: Clue): JSX.Element {
+    return (
+      <div key={clue.id} className="persona-card persona-card-clue">
+        <div className="persona-badge persona-badge-clue" aria-hidden="true">
+          🔍
+        </div>
+        <div className="persona-fields">
+          <textarea
+            className="input persona-desc"
+            value={clue.text}
+            placeholder="Clue text"
+            aria-label="Clue text"
+            rows={2}
+            ref={(el) => {
+              if (el && focusId.current === clue.id) {
+                el.focus()
+                focusId.current = null
+              }
+            }}
+            onChange={(e) => onSetClueText(clue.id, e.target.value)}
+          />
+        </div>
+        <button
+          type="button"
+          className="persona-del"
+          aria-label="Remove clue"
+          title="Remove clue"
+          onClick={() => onRemoveClue(clue.id)}
+        >
+          ✕
+        </button>
+      </div>
+    )
+  }
+
   return (
     <div className="personas">
       <div className="persona-group">
@@ -104,6 +154,23 @@ export function PersonasEditor({
           <h2 className="persona-group-title">Victim</h2>
         </div>
         {victim && card(victim)}
+      </div>
+
+      <div className="persona-group">
+        <div className="persona-group-head">
+          <h2 className="persona-group-title">Clues</h2>
+          <span className="persona-group-count">
+            {clues.length} clue{clues.length === 1 ? '' : 's'}
+          </span>
+        </div>
+        <p className="persona-group-note">
+          Extra clues tied to a room, not to any person. They show up beside the cast at play, each
+          on a green card.
+        </p>
+        {clues.map(clueCard)}
+        <button type="button" className="btn btn-small persona-add" onClick={addClue}>
+          + Add clue
+        </button>
       </div>
     </div>
   )

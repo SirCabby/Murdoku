@@ -16,6 +16,7 @@ import { solutionCrosses } from '../lib/solution'
 import { PlayerBoard } from './PlayerBoard'
 import { PersonaList } from './PersonaList'
 import type { PlaceMode } from './PersonaList'
+import { CluesPanel } from './CluesPanel'
 import { HintsPanel } from './HintsPanel'
 
 interface PuzzlePlayerProps {
@@ -328,6 +329,7 @@ export function PuzzlePlayer({ puzzleId, onBack, onEdit }: PuzzlePlayerProps): J
               crossActive={crossActive}
               onPickCross={pickCross}
             />
+            <CluesPanel clues={puzzle.clues} />
             <HintsPanel hints={puzzle.hints} />
           </div>
           <div className="play-board-col">

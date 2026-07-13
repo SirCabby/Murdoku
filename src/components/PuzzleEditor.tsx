@@ -44,6 +44,9 @@ export function PuzzleEditor({ puzzleId, onDone }: PuzzleEditorProps): JSX.Eleme
     setHintText,
     removeHint,
     clearHints,
+    addClue,
+    setClueText,
+    removeClue,
     addSuspect,
     setPersonaName,
     setPersonaDescription,
@@ -380,7 +383,8 @@ export function PuzzleEditor({ puzzleId, onDone }: PuzzleEditorProps): JSX.Eleme
         <>
           <p className="hint">
             Every puzzle has one or more suspects (lettered A, B, C… as you add them) and exactly one
-            victim (V). Give each a name and a description.
+            victim (V). Give each a name and a description. Below them, add any extra room clues that
+            aren't tied to a person.
           </p>
 
           <PersonasEditor
@@ -389,6 +393,9 @@ export function PuzzleEditor({ puzzleId, onDone }: PuzzleEditorProps): JSX.Eleme
             onSetName={(id, name) => setPersonaName(puzzleId, id, name)}
             onSetDescription={(id, description) => setPersonaDescription(puzzleId, id, description)}
             onRemove={(id) => removePersona(puzzleId, id)}
+            onAddClue={() => addClue(puzzleId)}
+            onSetClueText={(id, text) => setClueText(puzzleId, id, text)}
+            onRemoveClue={(id) => removeClue(puzzleId, id)}
           />
         </>
       )}
