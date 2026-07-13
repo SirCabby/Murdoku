@@ -571,6 +571,31 @@ body {
 /* Play mode: the cast sits to the left of the board as a 2-column grid. On
    narrow screens the board wraps below the panel. */
 .play-layout { display: flex; align-items: flex-start; gap: 20px; flex-wrap: wrap; }
+/* Left column of play mode: the cast stacked above the hint dispenser. */
+.play-side { flex: none; width: 340px; max-width: 100%; display: flex; flex-direction: column; gap: 16px; }
+
+/* Play-mode hint dispenser beneath the cast. Hidden until asked for, then reveals
+   authored clues one at a time; each revealed clue can be zipped shut on its own. */
+.hints-panel { display: flex; flex-direction: column; gap: 8px; }
+.hints-show { align-self: flex-start; }
+.hints-panel-head { display: flex; align-items: center; justify-content: space-between; gap: 10px; }
+.hints-panel-title { margin: 0; font-size: 15px; }
+.play-hint { background: var(--panel); border: 1px solid var(--line); border-radius: 10px; overflow: hidden; }
+.play-hint-head {
+  width: 100%; display: flex; align-items: center; justify-content: space-between; gap: 10px;
+  padding: 8px 10px; background: transparent; border: none;
+  font: inherit; color: inherit; text-align: left; cursor: pointer;
+}
+.play-hint-head:hover { background: var(--panel-2); }
+.play-hint-num {
+  flex: none; width: 26px; height: 26px; border-radius: 6px;
+  display: inline-flex; align-items: center; justify-content: center;
+  font-weight: 700; font-size: 13px;
+  background: var(--accent); color: var(--accent-ink);
+}
+.play-hint-toggle { flex: none; color: var(--muted); font-size: 12px; }
+.play-hint-text { padding: 0 12px 10px; font-size: 13px; line-height: 1.5; overflow-wrap: anywhere; }
+.play-hint-text.is-empty { font-style: italic; color: var(--muted); }
 /* The board and the accusation picker stack in one column beside the cast. */
 .play-board-col { flex: 1 1 320px; min-width: 0; display: flex; flex-direction: column; gap: 14px; }
 .play-board-col .board-scroll { min-width: 0; }

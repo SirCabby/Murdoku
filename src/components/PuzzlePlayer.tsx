@@ -13,6 +13,7 @@ import { usePlayHistory } from '../state/usePlayHistory'
 import { PlayerBoard } from './PlayerBoard'
 import { PersonaList } from './PersonaList'
 import type { PlaceMode } from './PersonaList'
+import { HintsPanel } from './HintsPanel'
 
 interface PuzzlePlayerProps {
   puzzleId: string
@@ -233,16 +234,19 @@ export function PuzzlePlayer({ puzzleId, onBack, onEdit }: PuzzlePlayerProps): J
 
       {hasCells ? (
         <div className="play-layout">
-          <PersonaList
-            personas={puzzle.personas}
-            activeId={activePersona ? activeId : null}
-            highlightId={highlight && activePersona ? activeId : null}
-            onPick={pickPersona}
-            mode={mode}
-            onModeChange={setMode}
-            crossActive={crossActive}
-            onPickCross={pickCross}
-          />
+          <div className="play-side">
+            <PersonaList
+              personas={puzzle.personas}
+              activeId={activePersona ? activeId : null}
+              highlightId={highlight && activePersona ? activeId : null}
+              onPick={pickPersona}
+              mode={mode}
+              onModeChange={setMode}
+              crossActive={crossActive}
+              onPickCross={pickCross}
+            />
+            <HintsPanel hints={puzzle.hints} />
+          </div>
           <div className="play-board-col">
             <div className="board-scroll">
               <PlayerBoard
