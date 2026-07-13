@@ -57,10 +57,15 @@ export function FileBar(): JSX.Element {
   function renderStatus(): JSX.Element {
     switch (fileSync.status) {
       case 'linked':
-        return (
+        return fileSync.hasUnsavedChanges ? (
+          <>
+            <span className="file-bar-dot file-bar-dot-warn" />
+            Unsaved changes — Save to write <strong>{fileSync.fileName}</strong>.
+          </>
+        ) : (
           <>
             <span className="file-bar-dot file-bar-dot-ok" />
-            Saving to <strong>{fileSync.fileName}</strong>
+            Saved to <strong>{fileSync.fileName}</strong>
           </>
         )
       case 'saving':
@@ -74,7 +79,7 @@ export function FileBar(): JSX.Element {
         return (
           <>
             <span className="file-bar-dot file-bar-dot-warn" />
-            Paused — reconnect <strong>{fileSync.fileName}</strong> to resume saving.
+            Paused — reconnect <strong>{fileSync.fileName}</strong> to save to it.
           </>
         )
       case 'error':
@@ -114,6 +119,14 @@ export function FileBar(): JSX.Element {
     if (fileSync.status === 'linked' || fileSync.status === 'saving') {
       return (
         <>
+          <button
+            type="button"
+            className="btn btn-small btn-primary"
+            onClick={() => void fileSync.saveNow()}
+            disabled={fileSync.status === 'saving' || !fileSync.hasUnsavedChanges}
+          >
+            {fileSync.status === 'saving' ? 'Saving…' : fileSync.hasUnsavedChanges ? 'Save' : 'Saved'}
+          </button>
           <button type="button" className="btn btn-small btn-ghost" onClick={() => void fileSync.openFile()}>
             Open other…
           </button>

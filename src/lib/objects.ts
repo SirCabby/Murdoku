@@ -22,6 +22,7 @@ export const CELL_OBJECT_KINDS: CellObjectKind[] = [
   'plant',
   'shelf',
   'box',
+  'register',
 ]
 
 export const OBJECT_LABEL: Record<ObjectKind, string> = {
@@ -34,6 +35,7 @@ export const OBJECT_LABEL: Record<ObjectKind, string> = {
   plant: 'Plant',
   shelf: 'Shelf',
   box: 'Box',
+  register: 'Cash register',
 }
 
 /**
@@ -48,6 +50,7 @@ export const BLOCKING_OBJECT_KINDS = new Set<CellObjectKind>([
   'plant',
   'shelf',
   'box',
+  'register',
 ])
 
 /** Does the object occupying `key` (if any) forbid placing a value there? */

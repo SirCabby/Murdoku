@@ -31,6 +31,7 @@ export type ObjectKind =
   | 'plant'
   | 'shelf'
   | 'box'
+  | 'register'
 
 /** The kinds that occupy a square — every object except the wall-bound window. */
 export type CellObjectKind = Exclude<ObjectKind, 'window'>
