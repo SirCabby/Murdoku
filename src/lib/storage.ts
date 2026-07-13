@@ -1,4 +1,5 @@
-import type { Library } from '../types/puzzle'
+import type { CellState, Library } from '../types/puzzle'
+import { cellKey } from './coords'
 import { newId } from './id'
 
 // Persistence for the whole library. For now this is localStorage, which keeps
@@ -6,10 +7,10 @@ import { newId } from './id'
 // will additionally sync this blob to the connected save file (see lib/gst.ts);
 // that hook is intentionally not wired up yet.
 
-const STORAGE_KEY = 'murdoku.library.v1'
+const STORAGE_KEY = 'murdoku.library.v2'
 
 export function emptyLibrary(): Library {
-  return { version: 1, folders: [], puzzles: {} }
+  return { version: 2, folders: [], puzzles: {} }
 }
 
 export function loadLibrary(): Library {
@@ -17,7 +18,7 @@ export function loadLibrary(): Library {
     const raw = localStorage.getItem(STORAGE_KEY)
     if (!raw) return seedLibrary()
     const parsed = JSON.parse(raw) as Library
-    if (parsed && parsed.version === 1 && Array.isArray(parsed.folders)) {
+    if (parsed && parsed.version === 2 && Array.isArray(parsed.folders)) {
       return parsed
     }
   } catch {
@@ -35,40 +36,34 @@ export function saveLibrary(library: Library): void {
 }
 
 /**
- * First-run content so the app isn't an empty shell. A single folder with one
- * small example puzzle using neutral placeholder names. Timestamps are fixed so
- * the seed is deterministic.
+ * First-run content so the app isn't an empty shell: one folder holding a demo
+ * puzzle whose shape is a 4×4 block with a two-cell bulge on the right — enough
+ * to show that grids aren't always rectangles. Timestamps are fixed so the seed
+ * is deterministic.
  */
 function seedLibrary(): Library {
-  const t = 0
-  const mkCat = (name: string, labels: string[]) => ({
-    id: newId(),
-    name,
-    items: labels.map((label) => ({ id: newId(), label })),
-  })
+  const blank = (): CellState => ({ mark: 'blank', note: '' })
+  const cells: Record<string, CellState> = {}
+  for (let y = 0; y < 4; y++) {
+    for (let x = 0; x < 4; x++) cells[cellKey(x, y)] = blank()
+  }
+  cells[cellKey(4, 1)] = blank()
+  cells[cellKey(4, 2)] = blank()
 
   const puzzleId = newId()
   const folderId = newId()
 
-  const library: Library = {
-    version: 1,
+  return {
+    version: 2,
     folders: [{ id: folderId, name: 'My Cases', puzzleIds: [puzzleId] }],
     puzzles: {
       [puzzleId]: {
         id: puzzleId,
-        name: 'The Sample Mystery',
-        flavor:
-          'A demo puzzle. Click a cell to cycle blank → ✗ → ✓, right-click a cell to add a note. Edit or delete this from the home screen.',
-        categories: [
-          mkCat('Suspects', ['Captain Slate', 'Dr. Amber', 'Ms. Teal']),
-          mkCat('Weapons', ['Candlestick', 'Rope', 'Wrench']),
-          mkCat('Locations', ['Library', 'Cellar', 'Balcony']),
-        ],
-        cells: {},
-        createdAt: t,
-        updatedAt: t,
+        name: 'Sample Shape',
+        cells,
+        createdAt: 0,
+        updatedAt: 0,
       },
     },
   }
-  return library
 }

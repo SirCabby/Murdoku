@@ -1,7 +1,5 @@
 :root {
-  --cell: 34px;          /* grid cell size */
-  --lh: 140px;           /* left header width */
-  --col-label-h: 92px;   /* vertical column-label height */
+  --cell: 36px;          /* grid cell size */
 
   --bg: #14161c;
   --panel: #1c1f27;
@@ -19,6 +17,9 @@
   --yes-fg: #d8ffe9;
   --no-fg: #ff7a7a;
   --note: #e6b455;
+
+  --slot-line: #3a4152;  /* lattice line for empty editor slots */
+  --slot-fill: #6ea8fe;  /* a filled (existing) cell in the shape editor */
 
   color-scheme: dark;
 }
@@ -41,6 +42,9 @@
     --yes-fg: #0d5a37;
     --no-fg: #c0392b;
     --note: #b8860b;
+
+    --slot-line: #c2c9d6;
+    --slot-fill: #2f6fed;
 
     color-scheme: light;
   }
@@ -75,7 +79,6 @@ body {
 .view-head-left { display: flex; align-items: center; gap: 12px; }
 .view-head-actions { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
 .view-title { font-size: 22px; margin: 0; }
-.section-title { font-size: 16px; margin: 0; }
 
 /* ---- Buttons & inputs ---- */
 .btn {
@@ -94,12 +97,13 @@ body {
   padding: 8px 10px; font: inherit; width: 100%;
 }
 .input:focus { outline: 2px solid var(--accent); outline-offset: -1px; }
+.input.num { width: 64px; text-align: center; }
 
 .field { display: block; margin-bottom: 14px; max-width: 640px; }
 .field-label { display: block; font-size: 13px; color: var(--muted); margin-bottom: 4px; }
 
 .empty-state { color: var(--muted); padding: 30px 0; }
-.warn { color: var(--note); font-size: 13px; }
+.hint { color: var(--muted); font-size: 13px; max-width: 640px; margin: 10px 0 14px; }
 
 /* ---- Home ---- */
 .folder { margin-bottom: 26px; }
@@ -123,53 +127,43 @@ body {
 .puzzle-card-meta { font-size: 12px; color: var(--muted); }
 .puzzle-card-actions { display: flex; flex-direction: column; justify-content: center; padding: 6px; gap: 4px; border-left: 1px solid var(--line); }
 
-/* ---- Editor ---- */
-.editor-cats-head { display: flex; align-items: baseline; gap: 12px; margin: 18px 0 10px; }
-.editor-cats { display: grid; gap: 12px; grid-template-columns: repeat(auto-fill, minmax(240px, 1fr)); margin-bottom: 14px; }
-.cat-card { background: var(--panel); border: 1px solid var(--line); border-radius: 10px; padding: 12px; }
-.cat-card-head { display: flex; gap: 8px; margin-bottom: 10px; }
-.cat-name-input { font-weight: 600; }
-.cat-items { display: flex; flex-direction: column; gap: 6px; }
-.cat-item-row { display: flex; gap: 6px; align-items: center; }
+/* ---- Editor toolbar ---- */
+.toolbar {
+  display: flex; align-items: center; gap: 8px; flex-wrap: wrap;
+  background: var(--panel); border: 1px solid var(--line); border-radius: 10px;
+  padding: 10px 12px; max-width: 640px;
+}
+.toolbar-label { font-size: 13px; color: var(--muted); }
+.times { color: var(--muted); }
+.toolbar-count { margin-left: auto; font-size: 13px; color: var(--muted); }
 
-/* ---- Player ---- */
-.flavor { color: var(--muted); max-width: 720px; margin: 0 0 12px; }
+/* ---- Play legend ---- */
 .legend { font-size: 13px; color: var(--muted); display: flex; align-items: center; gap: 6px; flex-wrap: wrap; }
 .chip { display: inline-flex; align-items: center; justify-content: center; min-width: 22px; height: 20px; padding: 0 6px; border: 1px solid var(--line); border-radius: 5px; font-size: 12px; }
 .chip-no { color: var(--no-fg); }
 .chip-yes { color: var(--yes-fg); background: var(--yes-bg); }
-.toggle { display: inline-flex; align-items: center; gap: 6px; font-size: 13px; color: var(--muted); cursor: pointer; }
 
-.grid-scroll { overflow: auto; padding-bottom: 12px; }
+/* ---- Boards ---- */
+.board-scroll { overflow: auto; padding: 4px 0 12px; }
+.board { display: grid; width: max-content; }
 
-/* ---- The grid ---- */
-.grid { display: inline-flex; flex-direction: column; margin-top: 8px; }
-.band { display: flex; align-items: stretch; }
+/* Editor: paintable slots. Empty slots show the lattice; filled = a real cell. */
+.editor-board { touch-action: none; }
+.eslot {
+  width: var(--cell); height: var(--cell); padding: 0;
+  border: 1px dashed var(--slot-line); background: transparent; cursor: pointer;
+}
+.eslot:hover { background: var(--cell-hover); }
+.eslot.active { border: 1px solid var(--line-strong); background: var(--slot-fill); }
+.eslot.active:hover { background: var(--no-fg); }
 
-.row-header { width: var(--lh); display: flex; align-items: stretch; border-left: 2px solid var(--line-strong); border-bottom: 2px solid var(--line-strong); }
-.header-band .row-header.corner { border-bottom: none; border-left: none; }
-.row-header-name { width: 22px; writing-mode: vertical-rl; transform: rotate(180deg); display: flex; align-items: center; justify-content: center; font-size: 12px; font-weight: 700; color: var(--muted); background: var(--panel-2); }
-.row-items { flex: 1; display: flex; flex-direction: column; }
-.row-item { height: var(--cell); display: flex; align-items: center; justify-content: flex-end; padding: 0 8px; font-size: 12px; overflow: hidden; white-space: nowrap; border-top: 1px solid var(--line); }
-.row-item:first-child { border-top: none; }
-.row-item-text { overflow: hidden; text-overflow: ellipsis; }
-
-.colgroup { display: flex; flex-direction: column; border-left: 2px solid var(--line-strong); }
-.colgroup-name { height: 24px; display: flex; align-items: center; justify-content: center; font-size: 12px; font-weight: 700; color: var(--muted); background: var(--panel-2); }
-.colgroup-items { display: flex; height: var(--col-label-h); }
-.col-item { width: var(--cell); display: flex; align-items: flex-end; justify-content: center; padding-bottom: 6px; font-size: 12px; border-left: 1px solid var(--line); }
-.col-item:first-child { border-left: none; }
-.col-item-text { writing-mode: vertical-rl; transform: rotate(180deg); max-height: calc(var(--col-label-h) - 12px); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-
-.block { display: flex; flex-direction: column; border-left: 2px solid var(--line-strong); }
-.block-spacer { border-left: 2px solid transparent; }
-.block-row { display: flex; height: var(--cell); }
-
+/* Player: real cells placed at their coordinates. */
+.cell-pos { width: var(--cell); height: var(--cell); }
 .cell-wrap { position: relative; width: var(--cell); height: var(--cell); }
 .cell {
   width: 100%; height: 100%; border: 1px solid var(--line);
   background: var(--cell-bg); color: var(--text); cursor: pointer;
-  display: flex; align-items: center; justify-content: center; padding: 0; font-size: 16px;
+  display: flex; align-items: center; justify-content: center; padding: 0; font-size: 18px;
 }
 .cell:hover { background: var(--cell-hover); }
 .cell-no { color: var(--no-fg); }
@@ -183,6 +177,5 @@ body {
   width: 200px; background: var(--panel); border: 1px solid var(--line-strong);
   border-radius: 10px; padding: 10px; box-shadow: 0 8px 24px rgba(0,0,0,0.35);
 }
-.note-popover-head { font-size: 12px; color: var(--muted); margin-bottom: 6px; }
 .note-input { width: 100%; min-height: 60px; resize: vertical; background: var(--panel-2); color: var(--text); border: 1px solid var(--line); border-radius: 6px; padding: 6px; font: inherit; }
 .note-popover-actions { display: flex; gap: 6px; margin-top: 8px; }

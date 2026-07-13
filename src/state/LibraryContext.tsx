@@ -7,21 +7,21 @@ import {
   useState,
 } from 'react'
 import type { ReactNode } from 'react'
-import type {
-  Category,
-  Folder,
-  Item,
-  Library,
-  Mark,
-  Puzzle,
-} from '../types/puzzle'
+import type { Folder, Library, Puzzle } from '../types/puzzle'
 import { loadLibrary, saveLibrary } from '../lib/storage'
-import { setMark, setNote } from '../lib/marks'
+import {
+  clearMarks as clearMarksOp,
+  nextMark,
+  setCellExists,
+  setMark,
+  setNote,
+  setRectangle,
+} from '../lib/board'
+import { cellKey } from '../lib/coords'
 import { newId } from '../lib/id'
 
 // Central store for the whole library. Every mutation returns a new Library and
-// is persisted to storage via the effect below. Kept deliberately simple —
-// immutable updates on a single useState value.
+// is persisted via the effect below. Immutable updates on a single useState.
 
 export interface LibraryApi {
   library: Library
@@ -33,24 +33,13 @@ export interface LibraryApi {
   addPuzzle: (folderId: string, name: string) => Puzzle
   updatePuzzle: (puzzleId: string, patch: Partial<Puzzle>) => void
   deletePuzzle: (puzzleId: string) => void
+  // Shape editing
+  setCellExists: (puzzleId: string, x: number, y: number, exists: boolean) => void
+  setRectangle: (puzzleId: string, width: number, height: number) => void
+  clearShape: (puzzleId: string) => void
   // Play
-  cycleCell: (
-    puzzleId: string,
-    catA: Category,
-    itemA: Item,
-    catB: Category,
-    itemB: Item,
-    nextMark: Mark,
-    autoEliminate: boolean
-  ) => void
-  noteCell: (
-    puzzleId: string,
-    catA: Category,
-    itemA: Item,
-    catB: Category,
-    itemB: Item,
-    note: string
-  ) => void
+  cycleCell: (puzzleId: string, x: number, y: number) => void
+  noteCell: (puzzleId: string, x: number, y: number, note: string) => void
   clearMarks: (puzzleId: string) => void
 }
 
@@ -63,7 +52,7 @@ export function LibraryProvider({ children }: { children: ReactNode }): JSX.Elem
     saveLibrary(library)
   }, [library])
 
-  // Small helper to update a single puzzle immutably and bump its timestamp.
+  // Update a single puzzle immutably and bump its timestamp.
   const patchPuzzle = useCallback(
     (puzzleId: string, update: (p: Puzzle) => Puzzle): void => {
       setLibrary((lib) => {
@@ -103,11 +92,7 @@ export function LibraryProvider({ children }: { children: ReactNode }): JSX.Elem
           const folder = lib.folders.find((f) => f.id === folderId)
           const puzzles = { ...lib.puzzles }
           if (folder) for (const id of folder.puzzleIds) delete puzzles[id]
-          return {
-            ...lib,
-            folders: lib.folders.filter((f) => f.id !== folderId),
-            puzzles,
-          }
+          return { ...lib, folders: lib.folders.filter((f) => f.id !== folderId), puzzles }
         })
       },
 
@@ -115,8 +100,6 @@ export function LibraryProvider({ children }: { children: ReactNode }): JSX.Elem
         const puzzle: Puzzle = {
           id: newId(),
           name: name.trim() || 'Untitled puzzle',
-          flavor: '',
-          categories: [],
           cells: {},
           createdAt: now(),
           updatedAt: now(),
@@ -150,22 +133,32 @@ export function LibraryProvider({ children }: { children: ReactNode }): JSX.Elem
         })
       },
 
-      cycleCell(puzzleId, catA, itemA, catB, itemB, nextMark, autoEliminate) {
-        patchPuzzle(puzzleId, (p) => ({
-          ...p,
-          cells: setMark(p, catA, itemA, catB, itemB, nextMark, autoEliminate),
-        }))
+      setCellExists(puzzleId, x, y, exists) {
+        patchPuzzle(puzzleId, (p) => ({ ...p, cells: setCellExists(p.cells, x, y, exists) }))
       },
 
-      noteCell(puzzleId, catA, itemA, catB, itemB, note) {
-        patchPuzzle(puzzleId, (p) => ({
-          ...p,
-          cells: setNote(p, catA, itemA, catB, itemB, note),
-        }))
+      setRectangle(puzzleId, width, height) {
+        patchPuzzle(puzzleId, (p) => ({ ...p, cells: setRectangle(p.cells, width, height) }))
+      },
+
+      clearShape(puzzleId) {
+        patchPuzzle(puzzleId, (p) => ({ ...p, cells: {} }))
+      },
+
+      cycleCell(puzzleId, x, y) {
+        patchPuzzle(puzzleId, (p) => {
+          const current = p.cells[cellKey(x, y)]
+          if (!current) return p
+          return { ...p, cells: setMark(p.cells, x, y, nextMark(current.mark)) }
+        })
+      },
+
+      noteCell(puzzleId, x, y, note) {
+        patchPuzzle(puzzleId, (p) => ({ ...p, cells: setNote(p.cells, x, y, note) }))
       },
 
       clearMarks(puzzleId) {
-        patchPuzzle(puzzleId, (p) => ({ ...p, cells: {} }))
+        patchPuzzle(puzzleId, (p) => ({ ...p, cells: clearMarksOp(p.cells) }))
       },
     }
   }, [library, patchPuzzle])

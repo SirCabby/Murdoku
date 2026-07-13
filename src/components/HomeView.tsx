@@ -100,7 +100,7 @@ export function HomeView({ onPlay, onEdit }: HomeViewProps): JSX.Element {
                     <button type="button" className="puzzle-card-main" onClick={() => onPlay(pid)}>
                       <span className="puzzle-card-name">{puzzle.name}</span>
                       <span className="puzzle-card-meta">
-                        {puzzle.categories.length} categories
+                        {Object.keys(puzzle.cells).length} cells
                       </span>
                     </button>
                     <div className="puzzle-card-actions">

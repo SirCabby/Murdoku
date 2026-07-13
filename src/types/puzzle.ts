@@ -1,38 +1,30 @@
 // Core domain model for Murdoku.
 //
-// A Murdle-style puzzle is a set of *categories* (e.g. Suspects, Weapons,
-// Locations), each holding an equal number of *items*. Solving means deciding,
-// for every pair of items drawn from two different categories, whether they go
-// together (`yes`) or not (`no`). Those decisions live in `Puzzle.cells`, keyed
-// by a canonical, order-independent pair key (see `lib/cells.ts`).
+// A puzzle is a *shape*: a set of cells placed on an integer lattice. The shape
+// need not be a rectangle — it can have bulges, notches, or holes. Each existing
+// cell also carries play state (a mark and a note). Rows and columns are not
+// labelled yet; the puzzle is, for now, purely the arrangement of cells.
+//
+// Cells are keyed by their coordinate string `"x,y"` (see `lib/coords.ts`). A
+// key being present in `Puzzle.cells` is exactly what it means for that cell to
+// exist in the shape.
 
-/** A single cell's deduction state. `blank` = undecided. */
+/** A single cell's play state. `blank` = undecided. */
 export type Mark = 'blank' | 'no' | 'yes'
-
-export interface Item {
-  id: string
-  label: string
-}
-
-export interface Category {
-  id: string
-  name: string
-  items: Item[]
-}
 
 export interface CellState {
   mark: Mark
-  /** Free-text scratch note for this pairing. Empty string = no note. */
+  /** Free-text scratch note for this cell. Empty string = no note. */
   note: string
 }
 
 export interface Puzzle {
   id: string
   name: string
-  /** Optional mystery flavor text / the prompt the player is solving. */
-  flavor: string
-  categories: Category[]
-  /** Pair state, keyed by `cellKey(...)`. Absent keys are treated as blank. */
+  /**
+   * The grid shape *and* its play state. Keyed by `"x,y"`. A present key means
+   * the cell exists; its value holds the mark/note. Absent = no cell there.
+   */
   cells: Record<string, CellState>
   createdAt: number
   updatedAt: number
@@ -47,7 +39,7 @@ export interface Folder {
 
 /** The entire persisted library — one blob in localStorage / a save file. */
 export interface Library {
-  version: 1
+  version: 2
   folders: Folder[]
   puzzles: Record<string, Puzzle>
 }
