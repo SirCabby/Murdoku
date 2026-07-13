@@ -21,7 +21,7 @@
   --slot-line: #3a4152;  /* lattice line for empty editor slots */
   --slot-fill: #6ea8fe;  /* a filled (existing) cell in the shape editor */
 
-  --wall: #c9d2e3;       /* room-boundary wall between two cells */
+  --wall: #000000;       /* room-boundary wall between two cells */
   --wall-thick: 8px;     /* wall line thickness */
   --wall-hit: 24px;      /* clickable strip width straddling an edge (editor) */
 
@@ -50,7 +50,7 @@
     --slot-line: #c2c9d6;
     --slot-fill: #2f6fed;
 
-    --wall: #3a4152;
+    --wall: #000000;
 
     color-scheme: light;
   }
@@ -215,6 +215,14 @@ body {
 .wall-line { z-index: 5; pointer-events: none; background: var(--wall); border-radius: 2px; }
 .wall-line-v { justify-self: end; align-self: stretch; width: var(--wall-thick); height: 100%; transform: translateX(50%); }
 .wall-line-h { align-self: end; justify-self: stretch; height: var(--wall-thick); width: 100%; transform: translateY(50%); }
+
+/* Permanent room-perimeter walls: the shape's outer boundary. Derived from the
+   shape (never stored, never removable). Each hugs the inner face of its cell's
+   outward side, so the line stays within the board and never overhangs. */
+.wall-perim-top    { align-self: start;  justify-self: stretch; height: var(--wall-thick); width: 100%; }
+.wall-perim-bottom { align-self: end;    justify-self: stretch; height: var(--wall-thick); width: 100%; }
+.wall-perim-left   { justify-self: start; align-self: stretch; width: var(--wall-thick); height: 100%; }
+.wall-perim-right  { justify-self: end;   align-self: stretch; width: var(--wall-thick); height: 100%; }
 
 /* Editor walls mode: read-only cells with a clickable target on each interior edge. */
 .walls-board { touch-action: none; }

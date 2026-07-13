@@ -1,7 +1,7 @@
 import type { CSSProperties } from 'react'
 import type { Puzzle } from '../types/puzzle'
 import { boundsOf, parseCellKey } from '../lib/coords'
-import { parseWallKey } from '../lib/walls'
+import { parseWallKey, perimeterEdges } from '../lib/walls'
 import { Cell } from './Cell'
 
 interface PlayerBoardProps {
@@ -47,6 +47,21 @@ export function PlayerBoard({ puzzle, onCycle, onNote }: PlayerBoardProps): JSX.
               onNote={onNote ? (note) => onNote(x, y, note) : undefined}
             />
           </div>
+        )
+      })}
+
+      {perimeterEdges(puzzle.cells).map(({ x, y, side }) => {
+        const pos: CSSProperties = {
+          gridColumn: x - bounds.minX + 1,
+          gridRow: y - bounds.minY + 1,
+        }
+        return (
+          <div
+            key={`perim-${x},${y},${side}`}
+            className={`wall-line wall-perim-${side}`}
+            style={pos}
+            aria-hidden="true"
+          />
         )
       })}
 

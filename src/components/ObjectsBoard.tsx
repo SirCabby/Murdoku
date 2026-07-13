@@ -2,7 +2,7 @@ import { useEffect, useRef } from 'react'
 import type { CSSProperties, PointerEvent as ReactPointerEvent } from 'react'
 import type { CellObjectKind, ObjectKind, Puzzle } from '../types/puzzle'
 import { boundsOf, parseCellKey } from '../lib/coords'
-import { parseWallKey } from '../lib/walls'
+import { parseWallKey, perimeterEdges } from '../lib/walls'
 import {
   OBJECT_LABEL,
   bedDominoes,
@@ -176,6 +176,21 @@ export function ObjectsBoard({
             style={pos}
             src={bedImageUrl(piece.h > piece.w)}
             alt=""
+            aria-hidden="true"
+          />
+        )
+      })}
+
+      {perimeterEdges(puzzle.cells).map(({ x, y, side }) => {
+        const pos: CSSProperties = {
+          gridColumn: x - originX + 1,
+          gridRow: y - originY + 1,
+        }
+        return (
+          <div
+            key={`perim-${x},${y},${side}`}
+            className={`wall-line wall-perim-${side}`}
+            style={pos}
             aria-hidden="true"
           />
         )

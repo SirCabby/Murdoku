@@ -2,7 +2,7 @@ import { useEffect, useRef } from 'react'
 import type { CSSProperties, PointerEvent as ReactPointerEvent } from 'react'
 import type { Puzzle } from '../types/puzzle'
 import { boundsOf, parseCellKey } from '../lib/coords'
-import { interiorEdges } from '../lib/walls'
+import { interiorEdges, perimeterEdges } from '../lib/walls'
 
 interface WallsBoardProps {
   puzzle: Puzzle
@@ -62,6 +62,21 @@ export function WallsBoard({ puzzle, onSetWall }: WallsBoardProps): JSX.Element 
           gridRow: y - bounds.minY + 1,
         }
         return <div key={key} className="wcell" style={pos} />
+      })}
+
+      {perimeterEdges(puzzle.cells).map(({ x, y, side }) => {
+        const pos: CSSProperties = {
+          gridColumn: x - bounds.minX + 1,
+          gridRow: y - bounds.minY + 1,
+        }
+        return (
+          <div
+            key={`perim-${x},${y},${side}`}
+            className={`wall-line wall-perim-${side}`}
+            style={pos}
+            aria-hidden="true"
+          />
+        )
       })}
 
       {interiorEdges(puzzle.cells).map((edge) => {

@@ -23,12 +23,22 @@ export interface CandidateEdge extends WallEdge {
   key: string
 }
 
+/** One of a cell's four sides. */
+export type WallSide = 'top' | 'right' | 'bottom' | 'left'
+
 /** Booleans for which of a cell's four sides carry a wall. */
 export interface WallSides {
   top: boolean
   right: boolean
   bottom: boolean
   left: boolean
+}
+
+/** A permanent boundary wall: the `side` of an existing cell that faces outside the shape. */
+export interface PerimeterEdge {
+  x: number
+  y: number
+  side: WallSide
 }
 
 export function wallKey(x: number, y: number, orient: WallOrient): string {
@@ -99,6 +109,25 @@ export function interiorEdges(cells: Record<string, CellState>): CandidateEdge[]
     if (cellKey(x, y + 1) in cells) {
       edges.push({ x, y, orient: 'h', key: wallKey(x, y, 'h') })
     }
+  }
+  return edges
+}
+
+/**
+ * The room's outer boundary: every cell side that faces outside the shape (the
+ * neighbour across it doesn't exist). These walls are implied by the shape, so
+ * they're always present and can't be toggled — user-editable walls live only on
+ * interior edges (see `interiorEdges`). Anchored to the existing cell + side so
+ * the render never has to place anything outside the shape's grid tracks.
+ */
+export function perimeterEdges(cells: Record<string, CellState>): PerimeterEdge[] {
+  const edges: PerimeterEdge[] = []
+  for (const key of Object.keys(cells)) {
+    const { x, y } = parseCellKey(key)
+    if (!(cellKey(x, y - 1) in cells)) edges.push({ x, y, side: 'top' })
+    if (!(cellKey(x + 1, y) in cells)) edges.push({ x, y, side: 'right' })
+    if (!(cellKey(x, y + 1) in cells)) edges.push({ x, y, side: 'bottom' })
+    if (!(cellKey(x - 1, y) in cells)) edges.push({ x, y, side: 'left' })
   }
   return edges
 }
