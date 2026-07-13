@@ -3,6 +3,7 @@ import type { Persona, Puzzle } from '../types/puzzle'
 import { boundsOf, parseCellKey } from '../lib/coords'
 import { parseWallKey, perimeterEdges } from '../lib/walls'
 import { personaLabel, suspectsOf, victimOf } from '../lib/personas'
+import { isPlacementBlocked } from '../lib/objects'
 import { ObjectDecor, WindowDecor } from './BoardDecor'
 import { Cell } from './Cell'
 import type { GuessChip } from './Cell'
@@ -23,8 +24,6 @@ interface PlayerBoardProps {
   summaries?: boolean | undefined
   /** Place the active tool in a cell (guess, answer, or X, per the player's mode). Omit for read-only. */
   onPlace?: ((x: number, y: number) => void) | undefined
-  /** Edit a cell's note. Omit to disable notes. */
-  onNote?: ((x: number, y: number, note: string) => void) | undefined
 }
 
 /** One persona letter shown in a column/row summary, flagged if any cell in the lane answered it. */
@@ -47,7 +46,6 @@ export function PlayerBoard({
   active,
   summaries,
   onPlace,
-  onNote,
 }: PlayerBoardProps): JSX.Element | null {
   const keys = Object.keys(puzzle.cells)
   const bounds = boundsOf(keys)
@@ -138,19 +136,21 @@ export function PlayerBoard({
         const { x, y } = parseCellKey(key)
         const state = puzzle.cells[key]
         if (!state) return null
+        // A furnishing like a table fills its square, so no value (guess, answer,
+        // or X) may land there — the cell reads as unplaceable while a tool's held.
+        const blocked = isPlacementBlocked(puzzle.objects, key)
         const pos: CSSProperties = {
           gridColumn: x - originX + 1,
           gridRow: y - originY + 1,
         }
         return (
-          <div key={key} className="cell-pos" style={pos}>
+          <div key={key} className={`cell-pos${blocked ? ' cell-blocked' : ''}`} style={pos}>
             <Cell
               state={state}
               guesses={chipsFor(key)}
               answer={answerFor(key)}
               cross={puzzle.crosses[key] === true}
-              onPlace={placing && onPlace ? () => onPlace(x, y) : undefined}
-              onNote={onNote ? (note) => onNote(x, y, note) : undefined}
+              onPlace={placing && !blocked && onPlace ? () => onPlace(x, y) : undefined}
             />
           </div>
         )

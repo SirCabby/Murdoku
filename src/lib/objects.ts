@@ -36,6 +36,29 @@ export const OBJECT_LABEL: Record<ObjectKind, string> = {
   box: 'Box',
 }
 
+/**
+ * Furnishings that fill their square so no suspect can stand there. In play mode
+ * a cell holding one of these refuses every placement — persona guess, persona
+ * answer, and the crossing-out X alike. The other kinds (chair, carpet, bed) are
+ * things a suspect can occupy, so they never block.
+ */
+export const BLOCKING_OBJECT_KINDS = new Set<CellObjectKind>([
+  'table',
+  'tv',
+  'plant',
+  'shelf',
+  'box',
+])
+
+/** Does the object occupying `key` (if any) forbid placing a value there? */
+export function isPlacementBlocked(
+  objects: Record<string, CellObjectKind>,
+  key: string
+): boolean {
+  const kind = objects[key]
+  return kind !== undefined && BLOCKING_OBJECT_KINDS.has(kind)
+}
+
 // ---- Merging ----------------------------------------------------------------
 // Some furnishings fuse with same-kind neighbours so a run of them reads as one
 // piece. Carpet and table use the puzzle-authoring tile art from murdoku.com

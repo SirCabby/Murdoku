@@ -15,7 +15,6 @@ import {
   nextMark,
   setCellExists,
   setMark,
-  setNote,
   setRectangle,
 } from '../lib/board'
 import { pruneWalls, setWall as setWallOp } from '../lib/walls'
@@ -88,7 +87,6 @@ export interface LibraryApi {
   removePersona: (puzzleId: string, id: string) => void
   // Play
   cycleCell: (puzzleId: string, x: number, y: number) => void
-  noteCell: (puzzleId: string, x: number, y: number, note: string) => void
   clearMarks: (puzzleId: string) => void
   // Guesses (per-cell tentative persona placements at play)
   toggleGuess: (puzzleId: string, x: number, y: number, personaId: string) => void
@@ -382,10 +380,6 @@ export function LibraryProvider({ children }: { children: ReactNode }): JSX.Elem
           if (!current) return p
           return { ...p, cells: setMark(p.cells, x, y, nextMark(current.mark)) }
         })
-      },
-
-      noteCell(puzzleId, x, y, note) {
-        patchPuzzle(puzzleId, (p) => ({ ...p, cells: setNote(p.cells, x, y, note) }))
       },
 
       clearMarks(puzzleId) {

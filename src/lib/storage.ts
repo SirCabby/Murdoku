@@ -300,7 +300,7 @@ export function saveLibrary(library: Library): void {
  * Timestamps are fixed so the seed is deterministic.
  */
 function seedLibrary(): Library {
-  const blank = (): CellState => ({ mark: 'blank', note: '' })
+  const blank = (): CellState => ({ mark: 'blank' })
   const cells: Record<string, CellState> = {}
   for (let y = 0; y < 4; y++) {
     for (let x = 0; x < 4; x++) cells[cellKey(x, y)] = blank()

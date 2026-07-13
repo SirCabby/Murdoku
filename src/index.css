@@ -235,8 +235,6 @@ body {
 .player-board .cell-readonly:hover { background: var(--floor); }
 .player-board .cell-no { color: #a5342a; }
 .player-board .cell-yes { background: var(--yes-bg); color: var(--yes-fg); }
-.cell-note-dot { position: absolute; top: 2px; right: 2px; width: 6px; height: 6px; border-radius: 50%; background: var(--note); }
-
 /* Placement guesses: a compact grid of persona-letter chips filling a play cell.
    Click-through so the cell button beneath keeps the placement gesture. */
 .guess-grid {
@@ -273,6 +271,8 @@ body {
 
 /* When a placement tool is held the whole board reads as "placing". */
 .player-board.is-placing .cell { cursor: crosshair; }
+/* Furnishing-filled cells reject every placement; the cursor cues it. */
+.player-board.is-placing .cell-blocked .cell { cursor: not-allowed; }
 
 /* ---- Column / row summaries ---- */
 /* The board flanked by two read-only strips: column summaries above, row
@@ -538,12 +538,3 @@ body {
 .persona-card-btn { cursor: pointer; text-align: left; font: inherit; color: inherit; transition: border-color 0.08s, box-shadow 0.08s; }
 .persona-card-btn:hover { border-color: var(--line-strong); }
 .persona-card-btn.is-active { border-color: var(--accent); box-shadow: 0 0 0 1px var(--accent); }
-
-/* ---- Note popover ---- */
-.note-popover {
-  position: absolute; z-index: 20; top: calc(var(--cell) + 4px); left: 0;
-  width: 200px; background: var(--panel); border: 1px solid var(--line-strong);
-  border-radius: 10px; padding: 10px; box-shadow: 0 8px 24px rgba(0,0,0,0.35);
-}
-.note-input { width: 100%; min-height: 60px; resize: vertical; background: var(--panel-2); color: var(--text); border: 1px solid var(--line); border-radius: 6px; padding: 6px; font: inherit; }
-.note-popover-actions { display: flex; gap: 6px; margin-top: 8px; }

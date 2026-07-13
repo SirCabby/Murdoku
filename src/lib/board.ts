@@ -4,9 +4,9 @@ import { cellKey } from './coords'
 // Pure operations on a puzzle's `cells` map. Each returns a new map — callers
 // replace `puzzle.cells` with the result. Two concerns live here:
 //   - shape editing: which cells exist (setCellExists / setRectangle / clear)
-//   - play:          the mark/note on an existing cell (setMark / setNote)
+//   - play:          the mark on an existing cell (setMark)
 
-const BLANK: CellState = { mark: 'blank', note: '' }
+const BLANK: CellState = { mark: 'blank' }
 
 /** Cycle order when a cell is clicked in play: undecided → ruled out → chosen. */
 export function nextMark(mark: Mark): Mark {
@@ -77,20 +77,7 @@ export function setMark(
   return { ...cells, [key]: { ...prev, mark } }
 }
 
-/** Sets a note on an existing cell. No-op if the cell isn't part of the shape. */
-export function setNote(
-  cells: Record<string, CellState>,
-  x: number,
-  y: number,
-  note: string
-): Record<string, CellState> {
-  const key = cellKey(x, y)
-  const prev = cells[key]
-  if (!prev) return cells
-  return { ...cells, [key]: { ...prev, note } }
-}
-
-/** Resets every cell's mark/note to blank, keeping the shape intact. */
+/** Resets every cell's mark to blank, keeping the shape intact. */
 export function clearMarks(
   cells: Record<string, CellState>
 ): Record<string, CellState> {
