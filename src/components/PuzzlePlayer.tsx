@@ -7,6 +7,7 @@ import {
   saveAutoCleanup,
   saveShowSummaries,
 } from '../lib/prefs'
+import { usePlayHistory } from '../state/usePlayHistory'
 import { PlayerBoard } from './PlayerBoard'
 import { PersonaList } from './PersonaList'
 import type { PlaceMode } from './PersonaList'
@@ -59,6 +60,10 @@ export function PuzzlePlayer({ puzzleId, onBack, onEdit }: PuzzlePlayerProps): J
   // The mode a click actually lands in: holding Shift flips guess↔answer while the
   // key is down (the X tool ignores mode, so this only matters with a persona).
   const effectiveMode: PlaceMode = shiftHeld ? (mode === 'answer' ? 'guess' : 'answer') : mode
+
+  // Undo/redo of board actions (guesses, answers, crosses — including an automatic
+  // clean-up's whole cascade), persisted per puzzle and bound to Ctrl/Cmd+Z / +Y.
+  const { canUndo, canRedo, undo, redo } = usePlayHistory(puzzle)
 
   // Pick up a persona (dropping the X tool), or the X tool (dropping the persona).
   function pickPersona(id: string): void {
@@ -140,6 +145,28 @@ export function PuzzlePlayer({ puzzleId, onBack, onEdit }: PuzzlePlayerProps): J
           <h1 className="view-title">{puzzle.name}</h1>
         </div>
         <div className="view-head-actions">
+          <div className="undo-redo">
+            <button
+              type="button"
+              className="btn btn-icon"
+              onClick={undo}
+              disabled={!canUndo}
+              title="Undo (Ctrl+Z)"
+              aria-label="Undo"
+            >
+              ↶
+            </button>
+            <button
+              type="button"
+              className="btn btn-icon"
+              onClick={redo}
+              disabled={!canRedo}
+              title="Redo (Ctrl+Y)"
+              aria-label="Redo"
+            >
+              ↷
+            </button>
+          </div>
           <label className="cleanup-toggle">
             <span className="cleanup-toggle-label">Clean up:</span>
             <select

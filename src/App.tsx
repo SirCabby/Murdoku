@@ -35,6 +35,7 @@ export function App(): JSX.Element {
         )}
         {view.name === 'play' && (
           <PuzzlePlayer
+            key={view.puzzleId}
             puzzleId={view.puzzleId}
             onBack={() => setView({ name: 'home' })}
             onEdit={() => setView({ name: 'edit', puzzleId: view.puzzleId })}

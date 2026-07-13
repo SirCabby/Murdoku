@@ -128,6 +128,9 @@ body {
 .btn.is-active { border-color: var(--accent); box-shadow: 0 0 0 1px var(--accent); }
 .btn:disabled { opacity: 0.5; cursor: default; }
 .btn:disabled:hover { border-color: var(--line); }
+/* Compact square button carrying a single glyph (e.g. the undo/redo arrows). */
+.btn-icon { padding: 6px 10px; font-size: 17px; line-height: 1; }
+.undo-redo { display: inline-flex; gap: 6px; }
 
 /* "Clean up" mode selector in the play-view header: Manual (the plain behaviour)
    vs Automatic (committing an answer crosses out the rest of its row/column and
