@@ -50,6 +50,7 @@ export function PuzzleEditor({ puzzleId, onDone }: PuzzleEditorProps): JSX.Eleme
     removePersona,
     setSolution,
     clearSolution,
+    setSolutionMurderer,
   } = useLibrary()
   const puzzle = library.puzzles[puzzleId]
 
@@ -450,12 +451,14 @@ export function PuzzleEditor({ puzzleId, onDone }: PuzzleEditorProps): JSX.Eleme
               <p className="hint">
                 Pick a person, then click the room they're in to build the solution. Each person goes
                 in exactly one room, and no two share a row or column — placing one clears anyone else
-                in that row or column. Every other room is X'd out automatically.
+                in that row or column. Every other room is X'd out automatically. Below the board, name
+                the suspect who's actually the murderer.
               </p>
 
               <SolutionEditor
                 puzzle={puzzle}
                 onPlace={(x, y, personaId) => setSolution(puzzleId, x, y, personaId)}
+                onSetMurderer={(personaId) => setSolutionMurderer(puzzleId, personaId)}
               />
             </>
           ) : (

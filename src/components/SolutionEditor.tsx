@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from 'react'
 import type { Puzzle } from '../types/puzzle'
-import { personaLabel } from '../lib/personas'
+import { personaLabel, suspectsOf } from '../lib/personas'
 import { solutionCrosses } from '../lib/solution'
 import { PlayerBoard } from './PlayerBoard'
 import { PersonaList } from './PersonaList'
@@ -9,6 +9,8 @@ interface SolutionEditorProps {
   puzzle: Puzzle
   /** Place the picked-up persona in a cell of the answer key (the store keeps it legal). */
   onPlace: (x: number, y: number, personaId: string) => void
+  /** Set (or clear, with `null`) the answer key's murderer — always a suspect. */
+  onSetMurderer: (personaId: string | null) => void
 }
 
 // The answer-key board never draws guesses — the author only commits definitive
@@ -23,7 +25,7 @@ const NO_GUESSES: Record<string, string[]> = {}
  * the ruled-out cells. Reuses the play board and persona list so the key looks
  * exactly like the solved puzzle a player is working toward.
  */
-export function SolutionEditor({ puzzle, onPlace }: SolutionEditorProps): JSX.Element {
+export function SolutionEditor({ puzzle, onPlace, onSetMurderer }: SolutionEditorProps): JSX.Element {
   // The persona picked up as the placement tool, if any. Cleared on Esc or when
   // the puzzle changes, mirroring the play view.
   const [activeId, setActiveId] = useState<string | null>(null)
@@ -65,6 +67,13 @@ export function SolutionEditor({ puzzle, onPlace }: SolutionEditorProps): JSX.El
   // Every placeable room with no persona is ruled out — derived fresh each render.
   const crosses = solutionCrosses(puzzle.solution, puzzle.cells, puzzle.objects)
 
+  // The answer key's murderer dropdown lists only suspects (never the victim).
+  // Resolve the stored id to a live suspect so a stale one reads as no choice made.
+  const suspects = suspectsOf(puzzle.personas)
+  const murdererValue = suspects.some((s) => s.id === puzzle.solutionMurderer)
+    ? puzzle.solutionMurderer!
+    : ''
+
   return (
     <div className="play-layout">
       <PersonaList personas={puzzle.personas} activeId={activeId} onPick={pick} />
@@ -78,6 +87,28 @@ export function SolutionEditor({ puzzle, onPlace }: SolutionEditorProps): JSX.El
             crosses={crosses}
             onPlace={holding && activePersona ? (x, y) => onPlace(x, y, activePersona.id) : undefined}
           />
+        </div>
+        <div className="murderer-pick">
+          <label className="murderer-pick-label" htmlFor="solution-murderer-select">
+            The murderer is…
+          </label>
+          <select
+            id="solution-murderer-select"
+            className="murderer-select"
+            value={murdererValue}
+            onChange={(e) => onSetMurderer(e.target.value || null)}
+          >
+            <option value="">— choose a suspect —</option>
+            {suspects.map((s) => {
+              const label = personaLabel(puzzle.personas, s)
+              const name = s.name.trim()
+              return (
+                <option key={s.id} value={s.id}>
+                  {label} — {name || `Suspect ${label}`}
+                </option>
+              )
+            })}
+          </select>
         </div>
       </div>
 

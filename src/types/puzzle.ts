@@ -179,6 +179,15 @@ export interface Puzzle {
    */
   solution: Record<string, string>
   /**
+   * The author's answer key for the accusation: the id of the suspect who is
+   * actually the murderer, or `null` while the author hasn't decided. Always a
+   * *suspect* — the victim is never a valid choice. This is the authoritative
+   * answer the player's `murderer` accusation is checked against, kept apart from
+   * it just as `solution` is kept apart from the play `answers`. Removing that
+   * suspect from the cast clears it back to `null`.
+   */
+  solutionMurderer: string | null
+  /**
    * The player's final accusation: the id of the suspect they've concluded is
    * the murderer, or `null` while undecided. Always a *suspect* — the victim is
    * never a valid choice — and only one at a time. Unlike the per-cell play maps
@@ -200,7 +209,7 @@ export interface Folder {
 
 /** The entire persisted library — one blob in localStorage / a save file. */
 export interface Library {
-  version: 13
+  version: 14
   folders: Folder[]
   puzzles: Record<string, Puzzle>
 }

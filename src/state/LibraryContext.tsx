@@ -105,6 +105,8 @@ export interface LibraryApi {
   // `lib/solution.ts`); re-placing the same persona in its cell clears it.
   setSolution: (puzzleId: string, x: number, y: number, personaId: string) => void
   clearSolution: (puzzleId: string) => void
+  /** Set (or clear, with `null`) the answer key's murderer — always a suspect. */
+  setSolutionMurderer: (puzzleId: string, personaId: string | null) => void
   // Play
   cycleCell: (puzzleId: string, x: number, y: number) => void
   clearMarks: (puzzleId: string) => void
@@ -206,6 +208,7 @@ export function LibraryProvider({ children }: { children: ReactNode }): JSX.Elem
           crosses: {},
           murderer: null,
           solution: {},
+          solutionMurderer: null,
           createdAt: now(),
           updatedAt: now(),
         }
@@ -433,14 +436,15 @@ export function LibraryProvider({ children }: { children: ReactNode }): JSX.Elem
           if (!target || target.role === 'victim') return p
           if (suspectsOf(p.personas).length <= 1) return p
           // Drop the removed suspect's letter from any cell it was guessed,
-          // answered, or placed in the key, and clear the accusation if it named
-          // this suspect.
+          // answered, or placed in the key, and clear either accusation (the
+          // answer key's or the player's) if it named this suspect.
           return {
             ...p,
             personas: p.personas.filter((x) => x.id !== id),
             guesses: pruneGuessPersona(p.guesses, id),
             answers: pruneAnswerPersona(p.answers, id),
             solution: pruneSolutionPersona(p.solution, id),
+            solutionMurderer: p.solutionMurderer === id ? null : p.solutionMurderer,
             murderer: p.murderer === id ? null : p.murderer,
           }
         })
@@ -474,6 +478,17 @@ export function LibraryProvider({ children }: { children: ReactNode }): JSX.Elem
         patchPuzzle(puzzleId, (p) =>
           Object.keys(p.solution).length === 0 ? p : { ...p, solution: {} }
         )
+      },
+
+      setSolutionMurderer(puzzleId, personaId) {
+        patchPuzzle(puzzleId, (p) => {
+          // Clearing (null) always applies; naming someone only if they're an
+          // actual suspect in this cast — never the victim, never a stale id.
+          if (personaId !== null && !suspectsOf(p.personas).some((s) => s.id === personaId)) {
+            return p
+          }
+          return p.solutionMurderer === personaId ? p : { ...p, solutionMurderer: personaId }
+        })
       },
 
       cycleCell(puzzleId, x, y) {
