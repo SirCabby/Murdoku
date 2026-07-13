@@ -13,6 +13,13 @@
 
   --cell-bg: #191c24;
   --cell-hover: #2a3040;
+
+  /* Warm "room floor" the editor lays its cells on so the object artwork (light,
+     floor-tinted fills from the source site) stays legible. Deliberately
+     theme-independent — shared by every edit mode's board. */
+  --floor: #d8c49c;
+  --floor-hi: #e3d2ac;
+  --floor-line: #c3ad82;
   --yes-bg: #1f7a4d;
   --yes-fg: #d8ffe9;
   --no-fg: #ff7a7a;
@@ -228,7 +235,7 @@ body {
 
 /* Editor walls mode: read-only cells with a clickable target on each interior edge. */
 .walls-board { touch-action: none; }
-.wcell { width: var(--cell); height: var(--cell); border: 1px solid var(--line); background: var(--cell-bg); }
+.wcell { width: var(--cell); height: var(--cell); border: 1px solid var(--floor-line); background: var(--floor); }
 .wtarget {
   position: relative; padding: 0; border: none; background: transparent;
   cursor: pointer; z-index: 6;
@@ -245,15 +252,9 @@ body {
 .wtarget.window::after { background: var(--accent); }
 
 /* ---- Objects (furnishings) ---- */
-/* Object mode lays the shape out as a warm "room floor" so the artwork (which
-   uses light, floor-tinted fills like the source site) stays legible in either
-   app theme. The floor is deliberately theme-independent. */
-.objects-board {
-  touch-action: none;
-  --floor: #d8c49c;
-  --floor-hi: #e3d2ac;
-  --floor-line: #c3ad82;
-}
+/* Every edit mode lays its cells on the warm "room floor" (see the --floor vars
+   in :root) so object artwork reads the same in all modes. */
+.objects-board { touch-action: none; }
 .ocell {
   position: relative;
   width: var(--cell); height: var(--cell); padding: 3px;
@@ -262,6 +263,11 @@ body {
 }
 .ocell-btn { cursor: pointer; }
 .ocell-btn:hover { background: var(--floor-hi); }
+
+/* Read-only object art shown for reference in the other edit modes: the same
+   artwork, but no floor tile (the `--floor` vars live only on `.objects-board`)
+   and click-through, so the mode's own cells stay usable underneath. */
+.ocell-ghost { background: transparent; border-color: transparent; pointer-events: none; }
 
 /* Centered standalone icon vs. edge-to-edge autotile piece. */
 .obj-fit {
@@ -320,9 +326,9 @@ body {
 .rooms-board { touch-action: none; }
 .rcell {
   width: var(--cell); height: var(--cell); padding: 0;
-  border: 1px solid var(--line); background: var(--cell-bg); cursor: pointer;
+  border: 1px solid var(--floor-line); background: var(--floor); cursor: pointer;
 }
-.rcell:hover { background: var(--cell-hover); }
+.rcell:hover { background: var(--floor-hi); }
 
 /* A draggable name pill. Its lattice point is its bottom-centre, so a label
    dropped on a room's bottom wall sits just inside the room and covers only the

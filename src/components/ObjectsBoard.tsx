@@ -1,16 +1,11 @@
 import { useEffect, useRef } from 'react'
 import type { CSSProperties, PointerEvent as ReactPointerEvent } from 'react'
 import type { CellObjectKind, ObjectKind, Puzzle } from '../types/puzzle'
-import { boundsOf, cellKey, parseCellKey } from '../lib/coords'
+import { boundsOf, parseCellKey } from '../lib/coords'
 import { parseWallKey, perimeterEdges } from '../lib/walls'
-import {
-  OBJECT_LABEL,
-  bedDominoes,
-  isTileMergeKind,
-  tileNumberFor,
-  windowEdges,
-} from '../lib/objects'
-import { baseIconUrl, bedImageUrl, tileUrl } from '../lib/objectAssets'
+import { OBJECT_LABEL, bedDominoes, windowEdges } from '../lib/objects'
+import { bedImageUrl } from '../lib/objectAssets'
+import { LabelDecor, WindowDecor, objectCellContent } from './BoardDecor'
 
 /** What the palette currently has selected — an object kind, or the eraser. */
 export type ObjectTool = ObjectKind | 'erase'
@@ -25,8 +20,6 @@ interface ObjectsBoardProps {
 // A one-cell ring around the shape so perimeter window edges (which key off a
 // cell just outside the shape) land on a real grid track.
 const PAD = 1
-
-const WINDOW_ICON = baseIconUrl('window')
 
 /**
  * Object-placement editor board. When a square tool is selected, each cell is a
@@ -108,26 +101,6 @@ export function ObjectsBoard({
     onSetWindow(key, paintWindow.current)
   }
 
-  /** The artwork (and border-affecting classes) for one placed object. */
-  function cellContent(x: number, y: number, kind: CellObjectKind): {
-    cls: string
-    img: JSX.Element | null
-  } {
-    if (isTileMergeKind(kind)) {
-      const tile = tileNumberFor(puzzle.objects, x, y, kind)
-      if (tile === null) {
-        // A lone table has no tile; show its standalone icon in a normal cell.
-        return { cls: '', img: <img className="obj-fit" src={baseIconUrl(kind)} alt="" /> }
-      }
-      return { cls: ' ocell-tile', img: <img className="obj-fill" src={tileUrl(kind, tile)} alt="" /> }
-    }
-    if (kind === 'bed') {
-      // Beds are drawn by the domino overlay below; the cell is just seamless floor.
-      return { cls: ' ocell-bed', img: null }
-    }
-    return { cls: '', img: <img className="obj-fit" src={baseIconUrl(kind)} alt="" /> }
-  }
-
   return (
     <div className="board objects-board" style={style}>
       {Object.keys(puzzle.cells).map((key) => {
@@ -138,7 +111,7 @@ export function ObjectsBoard({
           gridRow: y - originY + 1,
         }
         const { cls, img } = kind
-          ? cellContent(x, y, kind)
+          ? objectCellContent(puzzle.objects, x, y, kind)
           : { cls: '', img: null }
 
         if (windowTool) {
@@ -212,29 +185,8 @@ export function ObjectsBoard({
         )
       })}
 
-      {Object.keys(puzzle.windows).map((key) => {
-        const { x, y, orient } = parseWallKey(key)
-        const pos: CSSProperties = {
-          gridColumn: x - originX + 1,
-          gridRow: y - originY + 1,
-        }
-        // A window faces into the room. The art defaults to facing up (h) /
-        // right (v), toward the wall's top/right cell; flip it when that cell is
-        // outside the shape (top- and right-perimeter walls), so it always
-        // faces inward. Interior walls keep the default.
-        const inwardCell = orient === 'h' ? cellKey(x, y) : cellKey(x + 1, y)
-        const flip = !(inwardCell in puzzle.cells)
-        return (
-          <img
-            key={`win-${key}`}
-            className={`window-icon window-icon-${orient}${flip ? ' window-icon-flip' : ''}`}
-            style={pos}
-            src={WINDOW_ICON}
-            alt=""
-            aria-hidden="true"
-          />
-        )
-      })}
+      <WindowDecor puzzle={puzzle} originX={originX} originY={originY} />
+      <LabelDecor puzzle={puzzle} originX={originX} originY={originY} />
 
       {windowTool &&
         windowEdges(puzzle.cells, puzzle.walls).map((edge) => {

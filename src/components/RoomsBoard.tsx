@@ -4,6 +4,13 @@ import type { Puzzle, RoomLabel } from '../types/puzzle'
 import { boundsOf, parseCellKey } from '../lib/coords'
 import { parseWallKey, perimeterEdges } from '../lib/walls'
 import { roomBottomCenter, roomOf } from '../lib/rooms'
+import { ObjectDecor, WindowDecor } from './BoardDecor'
+
+// A one-cell ring around the shape, matching the shape/objects boards, so all
+// modes render at the same size and left/top perimeter windows (keyed off a
+// cell just outside the shape) land on a real grid track. Labels still clamp to
+// the shape's own bounds, so they can't be dragged out into the ring.
+const PAD = 1
 
 interface RoomsBoardProps {
   puzzle: Puzzle
@@ -38,11 +45,12 @@ function clamp(v: number, lo: number, hi: number): number {
 }
 
 /**
- * Rooms-mode editor board. The shape and its walls are drawn read-only; every
- * cell is a target that, on click, drops a room-name label along the bottom of
- * the room it belongs to (a wall-bounded flood fill — see `lib/rooms.ts`). Each
- * label is a draggable pill carrying a text input and a delete button, so the
- * author can rename it and slide it anywhere along the walls to taste.
+ * Rooms-mode editor board. The shape, walls, objects, and windows are drawn
+ * read-only; every cell is a target that, on click, drops a room-name label
+ * along the bottom of the room it belongs to (a wall-bounded flood fill — see
+ * `lib/rooms.ts`). Each label is a draggable pill carrying a text input and a
+ * delete button, so the author can rename it and slide it anywhere along the
+ * walls to taste.
  */
 export function RoomsBoard({
   puzzle,
@@ -63,11 +71,15 @@ export function RoomsBoard({
   const bounds = boundsOf(Object.keys(puzzle.cells))
 
   const isDragging = dragTick !== null
+  // Shape bounds — labels clamp to these so they stay over the actual rooms.
   const minX = bounds ? bounds.minX : 0
   const maxX = bounds ? bounds.maxX : 0
   const minY = bounds ? bounds.minY : 0
   const maxY = bounds ? bounds.maxY : 0
-  const cols = maxX - minX + 1
+  // Render origin includes the padding ring shared with the other boards.
+  const originX = minX - PAD
+  const originY = minY - PAD
+  const cols = maxX - minX + 1 + PAD * 2
 
   useEffect(() => {
     if (!isDragging) return
@@ -100,7 +112,7 @@ export function RoomsBoard({
 
   if (!bounds) return null
 
-  const rows = maxY - minY + 1
+  const rows = maxY - minY + 1 + PAD * 2
   const style: CSSProperties = {
     gridTemplateColumns: `repeat(${cols}, var(--cell))`,
     gridTemplateRows: `repeat(${rows}, var(--cell))`,
@@ -109,8 +121,8 @@ export function RoomsBoard({
   /** Turn a lattice point into a position over the (relative) board. */
   function anchorStyle(x: number, y: number): CSSProperties {
     return {
-      left: `calc(var(--cell) * ${x - minX})`,
-      top: `calc(var(--cell) * ${y - minY})`,
+      left: `calc(var(--cell) * ${x - originX})`,
+      top: `calc(var(--cell) * ${y - originY})`,
     }
   }
 
@@ -148,8 +160,8 @@ export function RoomsBoard({
       {Object.keys(puzzle.cells).map((key) => {
         const { x, y } = parseCellKey(key)
         const pos: CSSProperties = {
-          gridColumn: x - minX + 1,
-          gridRow: y - minY + 1,
+          gridColumn: x - originX + 1,
+          gridRow: y - originY + 1,
         }
         return (
           <button
@@ -163,10 +175,12 @@ export function RoomsBoard({
         )
       })}
 
+      <ObjectDecor puzzle={puzzle} originX={originX} originY={originY} />
+
       {perimeterEdges(puzzle.cells).map(({ x, y, side }) => {
         const pos: CSSProperties = {
-          gridColumn: x - minX + 1,
-          gridRow: y - minY + 1,
+          gridColumn: x - originX + 1,
+          gridRow: y - originY + 1,
         }
         return (
           <div
@@ -181,8 +195,8 @@ export function RoomsBoard({
       {Object.keys(puzzle.walls).map((key) => {
         const { x, y, orient } = parseWallKey(key)
         const pos: CSSProperties = {
-          gridColumn: x - minX + 1,
-          gridRow: y - minY + 1,
+          gridColumn: x - originX + 1,
+          gridRow: y - originY + 1,
         }
         return (
           <div
@@ -193,6 +207,8 @@ export function RoomsBoard({
           />
         )
       })}
+
+      <WindowDecor puzzle={puzzle} originX={originX} originY={originY} />
 
       {puzzle.labels.map((label) => {
         const live = dragTick && dragTick.id === label.id ? dragTick : label

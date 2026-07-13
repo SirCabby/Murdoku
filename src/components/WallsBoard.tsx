@@ -3,18 +3,24 @@ import type { CSSProperties, PointerEvent as ReactPointerEvent } from 'react'
 import type { Puzzle } from '../types/puzzle'
 import { boundsOf, parseCellKey } from '../lib/coords'
 import { interiorEdges, perimeterEdges } from '../lib/walls'
+import { LabelDecor, ObjectDecor, WindowDecor } from './BoardDecor'
 
 interface WallsBoardProps {
   puzzle: Puzzle
   onSetWall: (key: string, on: boolean) => void
 }
 
+// A one-cell ring around the shape, matching the shape/objects boards, so all
+// modes render at the same size and left/top perimeter windows (keyed off a
+// cell just outside the shape) land on a real grid track.
+const PAD = 1
+
 /**
- * Walls-mode editor board. The shape is drawn read-only; a clickable target
- * straddles every interior edge (the gridline between two existing cells).
- * Click a target to toggle its wall; press and drag across targets to paint a
- * run — the gesture's mode (add vs remove) is locked on pointer-down, exactly
- * like the shape editor.
+ * Walls-mode editor board. A clickable target straddles every interior edge
+ * (the gridline between two existing cells); click a target to toggle its wall,
+ * or press and drag across targets to paint a run — the gesture's mode (add vs
+ * remove) is locked on pointer-down, exactly like the shape editor. The shape,
+ * objects, windows, and room names are all drawn read-only for reference.
  */
 export function WallsBoard({ puzzle, onSetWall }: WallsBoardProps): JSX.Element | null {
   const paintOn = useRef<boolean | null>(null)
@@ -35,8 +41,10 @@ export function WallsBoard({ puzzle, onSetWall }: WallsBoardProps): JSX.Element 
   const bounds = boundsOf(keys)
   if (!bounds) return null
 
-  const cols = bounds.maxX - bounds.minX + 1
-  const rows = bounds.maxY - bounds.minY + 1
+  const originX = bounds.minX - PAD
+  const originY = bounds.minY - PAD
+  const cols = bounds.maxX - bounds.minX + 1 + PAD * 2
+  const rows = bounds.maxY - bounds.minY + 1 + PAD * 2
   const style: CSSProperties = {
     gridTemplateColumns: `repeat(${cols}, var(--cell))`,
     gridTemplateRows: `repeat(${rows}, var(--cell))`,
@@ -58,16 +66,18 @@ export function WallsBoard({ puzzle, onSetWall }: WallsBoardProps): JSX.Element 
       {keys.map((key) => {
         const { x, y } = parseCellKey(key)
         const pos: CSSProperties = {
-          gridColumn: x - bounds.minX + 1,
-          gridRow: y - bounds.minY + 1,
+          gridColumn: x - originX + 1,
+          gridRow: y - originY + 1,
         }
         return <div key={key} className="wcell" style={pos} />
       })}
 
+      <ObjectDecor puzzle={puzzle} originX={originX} originY={originY} />
+
       {perimeterEdges(puzzle.cells).map(({ x, y, side }) => {
         const pos: CSSProperties = {
-          gridColumn: x - bounds.minX + 1,
-          gridRow: y - bounds.minY + 1,
+          gridColumn: x - originX + 1,
+          gridRow: y - originY + 1,
         }
         return (
           <div
@@ -79,11 +89,14 @@ export function WallsBoard({ puzzle, onSetWall }: WallsBoardProps): JSX.Element 
         )
       })}
 
+      <WindowDecor puzzle={puzzle} originX={originX} originY={originY} />
+      <LabelDecor puzzle={puzzle} originX={originX} originY={originY} />
+
       {interiorEdges(puzzle.cells).map((edge) => {
         const on = edge.key in puzzle.walls
         const pos: CSSProperties = {
-          gridColumn: edge.x - bounds.minX + 1,
-          gridRow: edge.y - bounds.minY + 1,
+          gridColumn: edge.x - originX + 1,
+          gridRow: edge.y - originY + 1,
         }
         return (
           <button

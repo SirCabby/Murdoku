@@ -3,6 +3,7 @@ import type { CSSProperties, PointerEvent as ReactPointerEvent } from 'react'
 import type { Puzzle } from '../types/puzzle'
 import { boundsOf, cellKey } from '../lib/coords'
 import { parseWallKey, perimeterEdges } from '../lib/walls'
+import { LabelDecor, ObjectDecor, WindowDecor } from './BoardDecor'
 
 interface EditorBoardProps {
   puzzle: Puzzle
@@ -19,8 +20,8 @@ const PAD = 1
  * click or drag across existing cells to remove them. The gesture's mode is
  * locked on pointer-down (add vs remove) so a drag does one consistent thing.
  *
- * Existing room walls are drawn read-only for reference (they can only be
- * edited in Walls mode), reusing the player's `.wall-line` overlay.
+ * Existing walls, objects, windows, and room names are drawn read-only for
+ * reference (each is edited in its own mode); only the shape is interactive here.
  */
 export function EditorBoard({ puzzle, onSetCell }: EditorBoardProps): JSX.Element {
   const paintMode = useRef<'add' | 'remove' | null>(null)
@@ -92,6 +93,8 @@ export function EditorBoard({ puzzle, onSetCell }: EditorBoardProps): JSX.Elemen
     <div className="board editor-board" style={style}>
       {slots}
 
+      <ObjectDecor puzzle={puzzle} originX={minX} originY={minY} />
+
       {perimeterEdges(puzzle.cells).map(({ x, y, side }) => {
         const pos: CSSProperties = {
           gridColumn: x - minX + 1,
@@ -122,6 +125,9 @@ export function EditorBoard({ puzzle, onSetCell }: EditorBoardProps): JSX.Elemen
           />
         )
       })}
+
+      <WindowDecor puzzle={puzzle} originX={minX} originY={minY} />
+      <LabelDecor puzzle={puzzle} originX={minX} originY={minY} />
     </div>
   )
 }
