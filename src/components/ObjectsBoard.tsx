@@ -111,7 +111,7 @@ export function ObjectsBoard({
           gridRow: y - originY + 1,
         }
         const { cls, img } = kind
-          ? objectCellContent(puzzle.objects, x, y, kind)
+          ? objectCellContent(puzzle.objects, x, y, kind, puzzle.walls)
           : { cls: '', img: null }
 
         if (windowTool) {
@@ -137,7 +137,7 @@ export function ObjectsBoard({
         )
       })}
 
-      {bedDominoes(puzzle.objects).map((piece) => {
+      {bedDominoes(puzzle.objects, puzzle.walls).map((piece) => {
         const pos: CSSProperties = {
           gridColumn: `${piece.x - originX + 1} / span ${piece.w}`,
           gridRow: `${piece.y - originY + 1} / span ${piece.h}`,

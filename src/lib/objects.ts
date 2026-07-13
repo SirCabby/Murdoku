@@ -1,7 +1,7 @@
 import type { CellObjectKind, CellState, ObjectKind } from '../types/puzzle'
 import { cellKey, parseCellKey } from './coords'
 import type { CandidateEdge } from './walls'
-import { parseWallKey, setWall, wallKey } from './walls'
+import { edgeBetween, parseWallKey, setWall, wallKey } from './walls'
 
 // Pure operations on a puzzle's furnishings. Two concerns, mirroring how cells
 // and walls are split:
@@ -69,12 +69,28 @@ export function isPlacementBlocked(
 // two-cell "domino" drawn as one image (`obj_bed` horizontal / `obj_bed_top`
 // vertical), never autotiled — so adjacent beds are paired into dominoes and
 // each pair (or leftover single) renders as one spanning image (see below).
+//
+// A wall fences neighbours apart: two same-kind squares separated by a wall are
+// distinct furnishings in distinct rooms, so they must not fuse. Every fuse test
+// therefore gates on `wallBetween` as well as same-kind adjacency.
 
 /** Kinds that autotile with the carpet/table tile sets. */
 export const TILE_MERGE_KINDS = new Set<CellObjectKind>(['carpet', 'table'])
 
 export function isTileMergeKind(kind: CellObjectKind): boolean {
   return TILE_MERGE_KINDS.has(kind)
+}
+
+/** Does a wall stand on the edge between two orthogonally-adjacent squares? */
+function wallBetween(
+  walls: Record<string, true>,
+  ax: number,
+  ay: number,
+  bx: number,
+  by: number
+): boolean {
+  const e = edgeBetween({ x: ax, y: ay }, { x: bx, y: by })
+  return e !== null && wallKey(e.x, e.y, e.orient) in walls
 }
 
 /**
@@ -105,11 +121,15 @@ export interface BedPiece {
 /**
  * Pairs bed squares into two-cell dominoes for rendering. A deterministic
  * row-major sweep pairs each unclaimed bed with its east neighbour first, else
- * its south neighbour; anything unpaired is a single. Every bed square lands in
- * exactly one piece, so a run of beds reads as whole beds rather than repeated
- * icons.
+ * its south neighbour; anything unpaired is a single. A wall between two beds
+ * blocks the pairing, so beds in separate rooms stay separate. Every bed square
+ * lands in exactly one piece, so a run of beds reads as whole beds rather than
+ * repeated icons.
  */
-export function bedDominoes(objects: Record<string, CellObjectKind>): BedPiece[] {
+export function bedDominoes(
+  objects: Record<string, CellObjectKind>,
+  walls: Record<string, true>
+): BedPiece[] {
   const isBed = (x: number, y: number): boolean => objects[cellKey(x, y)] === 'bed'
   const claimed = new Set<string>()
   const pieces: BedPiece[] = []
@@ -119,10 +139,10 @@ export function bedDominoes(objects: Record<string, CellObjectKind>): BedPiece[]
     .sort((a, b) => a.y - b.y || a.x - b.x)
   for (const { x, y } of beds) {
     if (claimed.has(cellKey(x, y))) continue
-    if (isBed(x + 1, y) && !claimed.has(cellKey(x + 1, y))) {
+    if (isBed(x + 1, y) && !claimed.has(cellKey(x + 1, y)) && !wallBetween(walls, x, y, x + 1, y)) {
       claimed.add(cellKey(x, y)).add(cellKey(x + 1, y))
       pieces.push({ x, y, w: 2, h: 1 })
-    } else if (isBed(x, y + 1) && !claimed.has(cellKey(x, y + 1))) {
+    } else if (isBed(x, y + 1) && !claimed.has(cellKey(x, y + 1)) && !wallBetween(walls, x, y, x, y + 1)) {
       claimed.add(cellKey(x, y)).add(cellKey(x, y + 1))
       pieces.push({ x, y, w: 1, h: 2 })
     } else {
@@ -147,17 +167,22 @@ export function tileNumberFor(
   objects: Record<string, CellObjectKind>,
   x: number,
   y: number,
-  kind: CellObjectKind
+  kind: CellObjectKind,
+  walls: Record<string, true>
 ): number | null {
-  const same = (cx: number, cy: number): boolean => objects[cellKey(cx, cy)] === kind
-  const n = same(x, y - 1)
-  const e = same(x + 1, y)
-  const s = same(x, y + 1)
-  const w = same(x - 1, y)
-  const ne = same(x + 1, y - 1) && n && e
-  const se = same(x + 1, y + 1) && s && e
-  const sw = same(x - 1, y + 1) && s && w
-  const nw = same(x - 1, y - 1) && n && w
+  // Two squares fuse only when they hold the same kind *and* no wall fences them
+  // apart. Cardinal links gate on the shared edge; a corner fills only when the
+  // whole 2×2 quadrant is wall-free, so a rug/table never bleeds across a wall.
+  const linked = (ax: number, ay: number, bx: number, by: number): boolean =>
+    objects[cellKey(bx, by)] === kind && !wallBetween(walls, ax, ay, bx, by)
+  const n = linked(x, y, x, y - 1)
+  const e = linked(x, y, x + 1, y)
+  const s = linked(x, y, x, y + 1)
+  const w = linked(x, y, x - 1, y)
+  const ne = n && e && linked(x, y - 1, x + 1, y - 1) && linked(x + 1, y, x + 1, y - 1)
+  const se = s && e && linked(x, y + 1, x + 1, y + 1) && linked(x + 1, y, x + 1, y + 1)
+  const sw = s && w && linked(x, y + 1, x - 1, y + 1) && linked(x - 1, y, x - 1, y + 1)
+  const nw = n && w && linked(x, y - 1, x - 1, y - 1) && linked(x - 1, y, x - 1, y - 1)
   const idx =
     (n ? 1 : 0) + (ne ? 2 : 0) + (e ? 4 : 0) + (se ? 8 : 0) +
     (s ? 16 : 0) + (sw ? 32 : 0) + (w ? 64 : 0) + (nw ? 128 : 0)

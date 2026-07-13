@@ -42,10 +42,11 @@ export function objectCellContent(
   objects: Record<string, CellObjectKind>,
   x: number,
   y: number,
-  kind: CellObjectKind
+  kind: CellObjectKind,
+  walls: Record<string, true>
 ): { cls: string; img: JSX.Element | null } {
   if (isTileMergeKind(kind)) {
-    const tile = tileNumberFor(objects, x, y, kind)
+    const tile = tileNumberFor(objects, x, y, kind, walls)
     if (tile === null) {
       // A lone table has no tile; show its standalone icon in a normal cell.
       return { cls: '', img: <img className="obj-fit" src={baseIconUrl(kind)} alt="" /> }
@@ -68,7 +69,7 @@ export function ObjectDecor({ puzzle, originX, originY }: DecorProps): JSX.Eleme
     <>
       {Object.entries(puzzle.objects).map(([key, kind]) => {
         const { x, y } = parseCellKey(key)
-        const { cls, img } = objectCellContent(puzzle.objects, x, y, kind)
+        const { cls, img } = objectCellContent(puzzle.objects, x, y, kind, puzzle.walls)
         if (!img) return null // beds are drawn by the domino layer below
         const pos: CSSProperties = {
           gridColumn: x - originX + 1,
@@ -81,7 +82,7 @@ export function ObjectDecor({ puzzle, originX, originY }: DecorProps): JSX.Eleme
         )
       })}
 
-      {bedDominoes(puzzle.objects).map((piece) => {
+      {bedDominoes(puzzle.objects, puzzle.walls).map((piece) => {
         const pos: CSSProperties = {
           gridColumn: `${piece.x - originX + 1} / span ${piece.w}`,
           gridRow: `${piece.y - originY + 1} / span ${piece.h}`,
