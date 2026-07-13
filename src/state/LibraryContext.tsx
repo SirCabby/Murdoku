@@ -629,16 +629,20 @@ export function LibraryProvider({ children }: { children: ReactNode }): JSX.Elem
       },
 
       clearBoard(puzzleId) {
-        patchPuzzle(puzzleId, (p) =>
-          // Nothing placed → no-op, so a reset on an empty board doesn't push a
-          // do-nothing undo step. Otherwise wipe all three play maps in one
-          // update, which the history observer records as a single undoable step.
-          Object.keys(p.guesses).length === 0 &&
-          Object.keys(p.answers).length === 0 &&
-          Object.keys(p.crosses).length === 0
-            ? p
-            : { ...p, guesses: {}, answers: {}, crosses: {} }
-        )
+        patchPuzzle(puzzleId, (p) => {
+          // Nothing placed and not solved → no-op, so a reset on a pristine board
+          // doesn't push a do-nothing undo step.
+          const empty =
+            Object.keys(p.guesses).length === 0 &&
+            Object.keys(p.answers).length === 0 &&
+            Object.keys(p.crosses).length === 0
+          if (empty && !p.solved) return p
+          // Wipe all three play maps in one update (the history observer records
+          // that as a single undoable step) and drop the sticky solved badge —
+          // `solved` is outside the undo snapshot, so a later undo restores the
+          // marks but leaves the case unsolved until it's re-validated.
+          return { ...p, guesses: {}, answers: {}, crosses: {}, solved: false }
+        })
       },
     }
   }, [library, patchPuzzle, replaceLibrary])
