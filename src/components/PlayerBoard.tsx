@@ -6,8 +6,10 @@ import { Cell } from './Cell'
 
 interface PlayerBoardProps {
   puzzle: Puzzle
-  onCycle: (x: number, y: number) => void
-  onNote: (x: number, y: number, note: string) => void
+  /** Cycle a cell's mark. Omit to render the board read-only (marks can't be changed). */
+  onCycle?: ((x: number, y: number) => void) | undefined
+  /** Edit a cell's note. Omit to disable notes. */
+  onNote?: ((x: number, y: number, note: string) => void) | undefined
 }
 
 /**
@@ -41,8 +43,8 @@ export function PlayerBoard({ puzzle, onCycle, onNote }: PlayerBoardProps): JSX.
           <div key={key} className="cell-pos" style={pos}>
             <Cell
               state={state}
-              onCycle={() => onCycle(x, y)}
-              onNote={(note) => onNote(x, y, note)}
+              onCycle={onCycle ? () => onCycle(x, y) : undefined}
+              onNote={onNote ? (note) => onNote(x, y, note) : undefined}
             />
           </div>
         )

@@ -5,11 +5,13 @@ import { MARK_GLYPH } from '../lib/board'
 
 interface CellProps {
   state: CellState
-  onCycle: () => void
-  onNote: (note: string) => void
+  /** Left-click handler that cycles the mark. Omit to make the cell read-only. */
+  onCycle?: (() => void) | undefined
+  /** Right-click handler that edits the cell's note. Omit to disable notes. */
+  onNote?: ((note: string) => void) | undefined
 }
 
-/** One playable square: left-click cycles the mark, right-click edits its note. */
+/** One playable square: left-click cycles the mark, right-click edits its note (each when enabled). */
 export function Cell({ state, onCycle, onNote }: CellProps): JSX.Element {
   const [editing, setEditing] = useState(false)
   const [draft, setDraft] = useState(state.note)
@@ -28,7 +30,7 @@ export function Cell({ state, onCycle, onNote }: CellProps): JSX.Element {
   }
 
   function commit(): void {
-    onNote(draft.trim())
+    onNote?.(draft.trim())
     setEditing(false)
   }
 
@@ -38,10 +40,10 @@ export function Cell({ state, onCycle, onNote }: CellProps): JSX.Element {
     <div className="cell-wrap">
       <button
         type="button"
-        className={`cell cell-${state.mark}`}
+        className={`cell cell-${state.mark}${onCycle ? '' : ' cell-readonly'}`}
         title={hasNote ? state.note : undefined}
         onClick={onCycle}
-        onContextMenu={openNote}
+        onContextMenu={onNote ? openNote : undefined}
       >
         <span className="cell-glyph">{MARK_GLYPH[state.mark]}</span>
         {hasNote && <span className="cell-note-dot" aria-hidden="true" />}

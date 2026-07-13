@@ -8,7 +8,7 @@ interface PuzzlePlayerProps {
 }
 
 export function PuzzlePlayer({ puzzleId, onBack, onEdit }: PuzzlePlayerProps): JSX.Element {
-  const { library, cycleCell, noteCell, clearMarks } = useLibrary()
+  const { library } = useLibrary()
 
   const puzzle = library.puzzles[puzzleId]
   if (!puzzle) {
@@ -31,33 +31,13 @@ export function PuzzlePlayer({ puzzleId, onBack, onEdit }: PuzzlePlayerProps): J
         </div>
         <div className="view-head-actions">
           <button type="button" className="btn" onClick={onEdit}>Edit puzzle</button>
-          <button
-            type="button"
-            className="btn btn-ghost"
-            onClick={() => {
-              if (confirm('Clear every mark and note on this board?')) clearMarks(puzzle.id)
-            }}
-          >
-            Clear marks
-          </button>
         </div>
       </div>
 
       {hasCells ? (
-        <>
-          <p className="legend">
-            Click a cell to cycle <span className="chip chip-blank">blank</span>
-            <span className="chip chip-no">✗</span>
-            <span className="chip chip-yes">✓</span>. Right-click a cell to add a note.
-          </p>
-          <div className="board-scroll">
-            <PlayerBoard
-              puzzle={puzzle}
-              onCycle={(x, y) => cycleCell(puzzle.id, x, y)}
-              onNote={(x, y, note) => noteCell(puzzle.id, x, y, note)}
-            />
-          </div>
-        </>
+        <div className="board-scroll">
+          <PlayerBoard puzzle={puzzle} />
+        </div>
       ) : (
         <div className="empty-state">
           <p>This puzzle has no cells yet.</p>
