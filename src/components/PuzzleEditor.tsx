@@ -6,13 +6,14 @@ import { EditorBoard } from './EditorBoard'
 import { WallsBoard } from './WallsBoard'
 import { ObjectsBoard } from './ObjectsBoard'
 import type { ObjectTool } from './ObjectsBoard'
+import { RoomsBoard } from './RoomsBoard'
 
 interface PuzzleEditorProps {
   puzzleId: string
   onDone: () => void
 }
 
-type EditMode = 'shape' | 'walls' | 'objects'
+type EditMode = 'shape' | 'walls' | 'objects' | 'rooms'
 
 /**
  * Defines a puzzle's shape and its room walls. Edits apply live to the library —
@@ -31,6 +32,11 @@ export function PuzzleEditor({ puzzleId, onDone }: PuzzleEditorProps): JSX.Eleme
     setObject,
     setWindow,
     clearObjects,
+    addLabel,
+    moveLabel,
+    setLabelText,
+    removeLabel,
+    clearLabels,
   } = useLibrary()
   const puzzle = library.puzzles[puzzleId]
 
@@ -52,6 +58,7 @@ export function PuzzleEditor({ puzzleId, onDone }: PuzzleEditorProps): JSX.Eleme
   const wallCount = Object.keys(puzzle.walls).length
   const objectCount = Object.keys(puzzle.objects).length
   const windowCount = Object.keys(puzzle.windows).length
+  const labelCount = puzzle.labels.length
 
   return (
     <div className="view editor">
@@ -101,6 +108,15 @@ export function PuzzleEditor({ puzzleId, onDone }: PuzzleEditorProps): JSX.Eleme
           onClick={() => setMode('objects')}
         >
           Objects
+        </button>
+        <button
+          type="button"
+          role="tab"
+          aria-selected={mode === 'rooms'}
+          className={`seg${mode === 'rooms' ? ' active' : ''}`}
+          onClick={() => setMode('rooms')}
+        >
+          Rooms
         </button>
       </div>
 
@@ -270,6 +286,48 @@ export function PuzzleEditor({ puzzleId, onDone }: PuzzleEditorProps): JSX.Eleme
             </>
           ) : (
             <p className="empty-state">Add some cells in Shape mode first, then come back to furnish them.</p>
+          )}
+        </>
+      )}
+
+      {mode === 'rooms' && (
+        <>
+          <div className="toolbar">
+            <span className="toolbar-label">Room names</span>
+            <button
+              type="button"
+              className="btn btn-small btn-ghost"
+              disabled={labelCount === 0}
+              onClick={() => {
+                if (labelCount === 0 || confirm('Remove every room name from this puzzle?')) clearLabels(puzzleId)
+              }}
+            >
+              Clear labels
+            </button>
+            <span className="toolbar-count">
+              {labelCount} label{labelCount === 1 ? '' : 's'}
+            </span>
+          </div>
+
+          {cellCount > 0 ? (
+            <>
+              <p className="hint">
+                Click inside a room to drop a name along its bottom wall, then type the room's name. Drag
+                a label to slide it wherever you like along the walls; use ✕ to remove it.
+              </p>
+
+              <div className="board-scroll">
+                <RoomsBoard
+                  puzzle={puzzle}
+                  onAddLabel={(x, y) => addLabel(puzzleId, x, y)}
+                  onMoveLabel={(id, x, y) => moveLabel(puzzleId, id, x, y)}
+                  onSetLabelText={(id, text) => setLabelText(puzzleId, id, text)}
+                  onRemoveLabel={(id) => removeLabel(puzzleId, id)}
+                />
+              </div>
+            </>
+          ) : (
+            <p className="empty-state">Add some cells in Shape mode first, then come back to name the rooms.</p>
           )}
         </>
       )}

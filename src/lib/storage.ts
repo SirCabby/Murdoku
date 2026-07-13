@@ -1,6 +1,7 @@
-import type { CellObjectKind, CellState, Folder, Library, Puzzle } from '../types/puzzle'
+import type { CellObjectKind, CellState, Folder, Library, Puzzle, RoomLabel } from '../types/puzzle'
 import { cellKey } from './coords'
 import { wallKey } from './walls'
+import { snapLabelToRoomBottom } from './rooms'
 import { newId } from './id'
 
 // Persistence for the whole library. For now this is localStorage, which keeps
@@ -8,13 +9,18 @@ import { newId } from './id'
 // will additionally sync this blob to the connected save file (see lib/gst.ts);
 // that hook is intentionally not wired up yet.
 
-const STORAGE_KEY = 'murdoku.library.v4'
+const STORAGE_KEY = 'murdoku.library.v6'
 // Older blobs still sitting in some users' storage, newest first. Each is
 // upgraded forward by `coerceLibrary` and then removed once read.
-const LEGACY_KEYS = ['murdoku.library.v3', 'murdoku.library.v2']
+const LEGACY_KEYS = [
+  'murdoku.library.v5',
+  'murdoku.library.v4',
+  'murdoku.library.v3',
+  'murdoku.library.v2',
+]
 
 export function emptyLibrary(): Library {
-  return { version: 4, folders: [], puzzles: {} }
+  return { version: 6, folders: [], puzzles: {} }
 }
 
 export function loadLibrary(): Library {
@@ -58,18 +64,21 @@ export function parseLibrary(text: string): Library {
 
 /**
  * Validate an already-parsed value and normalize it to the current Library
- * shape, or return null if it isn't one. Accepts the current version (4) and
- * upgrades a version-2 blob (no walls) or version-3 blob (no objects) forward.
- * Validation is shallow — the same trust level the app has always applied to
- * its own localStorage blob.
+ * shape, or return null if it isn't one. Accepts the current version (6) and
+ * upgrades older blobs forward one step at a time: v2 (no walls) → v3 (no
+ * objects) → v4 (no room labels) → v5 (labels mid-cell) → v6 (labels snapped to
+ * bottom walls). Validation is shallow — the same trust level the app has always
+ * applied to its own localStorage blob.
  */
 function coerceLibrary(value: unknown): Library | null {
   if (!value || typeof value !== 'object') return null
   const v = value as { version?: unknown; folders?: unknown }
   if (!Array.isArray(v.folders)) return null
-  if (v.version === 4) return value as Library
-  if (v.version === 3) return upgradeV3(value as LibraryV3)
-  if (v.version === 2) return upgradeV3(upgradeV2(value as LibraryV2))
+  if (v.version === 6) return value as Library
+  if (v.version === 5) return upgradeV5(value as LibraryV5)
+  if (v.version === 4) return upgradeV5(upgradeV4(value as LibraryV4))
+  if (v.version === 3) return upgradeV5(upgradeV4(upgradeV3(value as LibraryV3)))
+  if (v.version === 2) return upgradeV5(upgradeV4(upgradeV3(upgradeV2(value as LibraryV2))))
   return null
 }
 
@@ -83,12 +92,38 @@ function upgradeV2(old: LibraryV2): LibraryV3 {
 }
 
 /** Add empty `objects` / `windows` maps to every puzzle, taking v3 to v4. */
-function upgradeV3(old: LibraryV3): Library {
-  const puzzles: Record<string, Puzzle> = {}
+function upgradeV3(old: LibraryV3): LibraryV4 {
+  const puzzles: Record<string, PuzzleV4> = {}
   for (const [id, p] of Object.entries(old.puzzles)) {
     puzzles[id] = { ...p, objects: {}, windows: {} }
   }
   return { version: 4, folders: old.folders, puzzles }
+}
+
+/** Add an empty `labels` list to every puzzle, taking v4 to v5. */
+function upgradeV4(old: LibraryV4): LibraryV5 {
+  const puzzles: Record<string, PuzzleV5> = {}
+  for (const [id, p] of Object.entries(old.puzzles)) {
+    puzzles[id] = { ...p, labels: [] }
+  }
+  return { version: 5, folders: old.folders, puzzles }
+}
+
+/**
+ * Reposition every room label onto its room's bottom wall, taking v5 to v6.
+ * Version 5 dropped labels in the middle of a room's bottom cell; this snaps
+ * them down onto the bottom wall (once, on load) so they line up with new
+ * labels. `snapLabelToRoomBottom` resolves each label back to its room.
+ */
+function upgradeV5(old: LibraryV5): Library {
+  const puzzles: Record<string, Puzzle> = {}
+  for (const [id, p] of Object.entries(old.puzzles)) {
+    puzzles[id] = {
+      ...p,
+      labels: p.labels.map((l) => snapLabelToRoomBottom(p.cells, p.walls, l)),
+    }
+  }
+  return { version: 6, folders: old.folders, puzzles }
 }
 
 /** A pre-walls (version 2) puzzle, as it still sits in some users' storage. */
@@ -117,6 +152,29 @@ interface LibraryV3 {
   puzzles: Record<string, PuzzleV3>
 }
 
+/** A pre-labels (version 4) puzzle — has furnishings but no room labels. */
+interface PuzzleV4 extends PuzzleV3 {
+  objects: Record<string, CellObjectKind>
+  windows: Record<string, true>
+}
+
+interface LibraryV4 {
+  version: 4
+  folders: Folder[]
+  puzzles: Record<string, PuzzleV4>
+}
+
+/** A version-5 puzzle — has room labels, but positioned before the bottom-wall snap. */
+interface PuzzleV5 extends PuzzleV4 {
+  labels: RoomLabel[]
+}
+
+interface LibraryV5 {
+  version: 5
+  folders: Folder[]
+  puzzles: Record<string, PuzzleV5>
+}
+
 export function saveLibrary(library: Library): void {
   try {
     localStorage.setItem(STORAGE_KEY, JSON.stringify(library))
@@ -130,8 +188,8 @@ export function saveLibrary(library: Library): void {
  * puzzle whose shape is a 4×4 block with a two-cell bulge on the right — enough
  * to show that grids aren't always rectangles. A few walls fence a 2×2 room off
  * the top-left corner, and a couple of objects plus a perimeter window show the
- * furnishing features out of the box. Timestamps are fixed so the seed is
- * deterministic.
+ * furnishing features out of the box, and each of the two rooms carries a name
+ * label. Timestamps are fixed so the seed is deterministic.
  */
 function seedLibrary(): Library {
   const blank = (): CellState => ({ mark: 'blank', note: '' })
@@ -169,11 +227,19 @@ function seedLibrary(): Library {
     [wallKey(0, -1, 'h')]: true,
   }
 
+  // A name for each room, straddling its bottom wall: the fenced 2×2 (bottom row
+  // y=1, so its bottom wall is the gridline y=2) and the larger surrounding room
+  // (bottom row y=3, bottom wall at the perimeter gridline y=4).
+  const labels: RoomLabel[] = [
+    { id: newId(), text: 'Bedroom', x: 1, y: 2 },
+    { id: newId(), text: 'Parlor', x: 2, y: 4 },
+  ]
+
   const puzzleId = newId()
   const folderId = newId()
 
   return {
-    version: 4,
+    version: 6,
     folders: [{ id: folderId, name: 'My Cases', puzzleIds: [puzzleId] }],
     puzzles: {
       [puzzleId]: {
@@ -183,6 +249,7 @@ function seedLibrary(): Library {
         walls,
         objects,
         windows,
+        labels,
         createdAt: 0,
         updatedAt: 0,
       },

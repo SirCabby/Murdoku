@@ -7,7 +7,7 @@ import {
   useState,
 } from 'react'
 import type { ReactNode } from 'react'
-import type { CellObjectKind, Folder, Library, Puzzle } from '../types/puzzle'
+import type { CellObjectKind, Folder, Library, Puzzle, RoomLabel } from '../types/puzzle'
 import { loadLibrary, saveLibrary } from '../lib/storage'
 import {
   clearMarks as clearMarksOp,
@@ -57,6 +57,12 @@ export interface LibraryApi {
   setObject: (puzzleId: string, x: number, y: number, kind: CellObjectKind | null) => void
   setWindow: (puzzleId: string, key: string, on: boolean) => void
   clearObjects: (puzzleId: string) => void
+  // Room-name labels
+  addLabel: (puzzleId: string, x: number, y: number) => RoomLabel
+  moveLabel: (puzzleId: string, id: string, x: number, y: number) => void
+  setLabelText: (puzzleId: string, id: string, text: string) => void
+  removeLabel: (puzzleId: string, id: string) => void
+  clearLabels: (puzzleId: string) => void
   // Play
   cycleCell: (puzzleId: string, x: number, y: number) => void
   noteCell: (puzzleId: string, x: number, y: number, note: string) => void
@@ -131,6 +137,7 @@ export function LibraryProvider({ children }: { children: ReactNode }): JSX.Elem
           walls: {},
           objects: {},
           windows: {},
+          labels: [],
           createdAt: now(),
           updatedAt: now(),
         }
@@ -193,7 +200,16 @@ export function LibraryProvider({ children }: { children: ReactNode }): JSX.Elem
       },
 
       clearShape(puzzleId) {
-        patchPuzzle(puzzleId, (p) => ({ ...p, cells: {}, walls: {}, objects: {}, windows: {} }))
+        patchPuzzle(puzzleId, (p) => ({
+          ...p,
+          cells: {},
+          walls: {},
+          objects: {},
+          windows: {},
+          // Labels are anchored in lattice space, so an empty shape leaves them
+          // floating over nothing — clear them out with the cells they named.
+          labels: [],
+        }))
       },
 
       setWall(puzzleId, key, on) {
@@ -235,6 +251,37 @@ export function LibraryProvider({ children }: { children: ReactNode }): JSX.Elem
             ? p
             : { ...p, objects: {}, windows: {} }
         )
+      },
+
+      addLabel(puzzleId, x, y) {
+        const label: RoomLabel = { id: newId(), text: '', x, y }
+        patchPuzzle(puzzleId, (p) => ({ ...p, labels: [...p.labels, label] }))
+        return label
+      },
+
+      moveLabel(puzzleId, id, x, y) {
+        patchPuzzle(puzzleId, (p) => ({
+          ...p,
+          labels: p.labels.map((l) => (l.id === id ? { ...l, x, y } : l)),
+        }))
+      },
+
+      setLabelText(puzzleId, id, text) {
+        patchPuzzle(puzzleId, (p) => ({
+          ...p,
+          labels: p.labels.map((l) => (l.id === id ? { ...l, text } : l)),
+        }))
+      },
+
+      removeLabel(puzzleId, id) {
+        patchPuzzle(puzzleId, (p) => {
+          const labels = p.labels.filter((l) => l.id !== id)
+          return labels.length === p.labels.length ? p : { ...p, labels }
+        })
+      },
+
+      clearLabels(puzzleId) {
+        patchPuzzle(puzzleId, (p) => (p.labels.length === 0 ? p : { ...p, labels: [] }))
       },
 
       cycleCell(puzzleId, x, y) {

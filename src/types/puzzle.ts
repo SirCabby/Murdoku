@@ -37,6 +37,27 @@ export type ObjectKind =
 /** The kinds that occupy a square — every object except the wall-bound window. */
 export type CellObjectKind = Exclude<ObjectKind, 'window'>
 
+/**
+ * A movable room-name label that floats over the board. Its position is a
+ * lattice point (`x`, `y`) in cell units measured from the shape's origin — the
+ * label's *bottom-centre* sits at that point, so a label whose `y` is a wall
+ * gridline rests just inside the room above it, covering that wall's upper half.
+ * `x` runs 0…(width) across columns (a value like `2.5` is a column centre, `2`
+ * a gridline). Positions are stored explicitly (never derived from walls), so a
+ * name stays put across shape and wall edits; the editor seeds a new label on
+ * the bottom wall of the room it's dropped in, then lets the user drag it
+ * anywhere along the walls.
+ */
+export interface RoomLabel {
+  id: string
+  /** The room name shown on the label. Empty string while first being typed. */
+  text: string
+  /** Lattice x of the label's centre (cell units from the origin; may be fractional). */
+  x: number
+  /** Lattice y of the label's centre (cell units from the origin; may be fractional). */
+  y: number
+}
+
 export interface Puzzle {
   id: string
   name: string
@@ -64,6 +85,12 @@ export interface Puzzle {
    * carries a wall; a window is pruned once its edge stops qualifying.
    */
   windows: Record<string, true>
+  /**
+   * Movable room-name labels floating over the board. Positioned in lattice
+   * space (see `RoomLabel`) rather than tied to a single cell, so a name
+   * survives shape and wall edits and can be slid freely along the walls.
+   */
+  labels: RoomLabel[]
   createdAt: number
   updatedAt: number
 }
@@ -77,7 +104,7 @@ export interface Folder {
 
 /** The entire persisted library — one blob in localStorage / a save file. */
 export interface Library {
-  version: 4
+  version: 6
   folders: Folder[]
   puzzles: Record<string, Puzzle>
 }

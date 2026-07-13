@@ -182,7 +182,9 @@ body {
 
 /* ---- Boards ---- */
 .board-scroll { overflow: auto; padding: 4px 0 12px; }
-.board { display: grid; width: max-content; }
+/* `position: relative` anchors the absolutely-placed room-name labels; grid
+   items are unaffected. `width: max-content` still tracks the grid's own size. */
+.board { display: grid; width: max-content; position: relative; }
 
 /* Editor: paintable slots. Empty slots show the lattice; filled = a real cell. */
 .editor-board { touch-action: none; }
@@ -311,6 +313,54 @@ body {
 .ptool-glyph { font-size: 16px; line-height: 1; width: 20px; text-align: center; }
 .ptool-erase .ptool-glyph { font-size: 15px; }
 .palette-sep { width: 1px; align-self: stretch; background: var(--line); margin: 2px 2px; }
+
+/* ---- Room name labels ---- */
+/* Rooms mode: the shape/walls are drawn read-only (plain cells like Walls mode),
+   and every cell is a click target that drops a name label in its room. */
+.rooms-board { touch-action: none; }
+.rcell {
+  width: var(--cell); height: var(--cell); padding: 0;
+  border: 1px solid var(--line); background: var(--cell-bg); cursor: pointer;
+}
+.rcell:hover { background: var(--cell-hover); }
+
+/* A draggable name pill. Its lattice point is its bottom-centre, so a label
+   dropped on a room's bottom wall sits just inside the room and covers only the
+   wall's upper half — the wall line stays visible below it. */
+.rlabel {
+  position: absolute; z-index: 12; transform: translate(-50%, -100%);
+  display: inline-flex; align-items: center; gap: 3px; white-space: nowrap;
+  background: color-mix(in srgb, var(--panel) 92%, transparent);
+  border: 1px solid var(--line-strong); border-radius: 999px;
+  padding: 2px 4px 2px 9px; box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
+  cursor: move; touch-action: none;
+}
+.rlabel.dragging { box-shadow: 0 6px 18px rgba(0, 0, 0, 0.45); }
+.rlabel-input {
+  background: transparent; border: none; color: var(--text);
+  font: inherit; font-size: 13px; font-weight: 600; letter-spacing: 0.02em;
+  padding: 2px 0; min-width: 3ch;
+}
+.rlabel-input:focus { outline: none; }
+.rlabel-input::placeholder { color: var(--muted); font-weight: 400; }
+.rlabel-del {
+  flex: none; width: 18px; height: 18px; border-radius: 50%;
+  border: none; background: var(--panel-2); color: var(--muted);
+  font-size: 11px; line-height: 1; cursor: pointer;
+  display: inline-flex; align-items: center; justify-content: center;
+}
+.rlabel-del:hover { background: var(--no-fg); color: #fff; }
+
+/* Read-only room name at play: a legible pill floating over the floor plan.
+   Bottom-centre anchored to match the editor — sits just inside the room, above
+   its bottom wall. */
+.rlabel-static {
+  position: absolute; z-index: 12; transform: translate(-50%, -100%);
+  pointer-events: none; white-space: nowrap;
+  font-size: 13px; font-weight: 700; letter-spacing: 0.03em; color: var(--text);
+  background: color-mix(in srgb, var(--cell-bg) 82%, transparent);
+  border-radius: 6px; padding: 1px 7px;
+}
 
 /* ---- Note popover ---- */
 .note-popover {

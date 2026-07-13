@@ -80,6 +80,20 @@ export function PlayerBoard({ puzzle, onCycle, onNote }: PlayerBoardProps): JSX.
           />
         )
       })}
+
+      {puzzle.labels.map((label) => {
+        const text = label.text.trim()
+        if (!text) return null
+        const pos: CSSProperties = {
+          left: `calc(var(--cell) * ${label.x - bounds.minX})`,
+          top: `calc(var(--cell) * ${label.y - bounds.minY})`,
+        }
+        return (
+          <div key={label.id} className="rlabel-static" style={pos}>
+            {text}
+          </div>
+        )
+      })}
     </div>
   )
 }
