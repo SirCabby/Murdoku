@@ -639,6 +639,22 @@ body {
 .solved-flag .solved-check { margin-right: 0; }
 /* Reassurance when "Show errors" turned up nothing wrong in the committed answers. */
 .no-errors-note { color: var(--muted); font-size: 14px; }
+
+/* Collapsible answer-key reveal below the play controls: a read-only copy of the
+   author's solution board plus the key's murderer, opened by "Show answer key". */
+.answer-key {
+  border: 1px solid var(--line-strong); border-radius: 10px;
+  background: var(--panel-2); padding: 12px 14px;
+  display: flex; flex-direction: column; gap: 10px;
+}
+.answer-key-head { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
+.answer-key-title { margin: 0; font-size: 16px; }
+.answer-key .board-scroll { padding-top: 0; }
+.answer-key-murderer { margin: 0; font-size: 15px; }
+.answer-key-murderer-label { font-weight: 600; }
+.answer-key-murderer-name { font-weight: 700; }
+.answer-key-murderer-name.is-victim { color: var(--victim); }
+.answer-key-murderer-none { color: var(--muted); font-style: italic; }
 .persona-list {
   flex: none; width: 340px; max-width: 100%;
   display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px;

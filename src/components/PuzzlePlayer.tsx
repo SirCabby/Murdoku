@@ -12,6 +12,7 @@ import {
 import { usePlayHistory } from '../state/usePlayHistory'
 import { solveErrors, validateSolve } from '../lib/validate'
 import type { SolveErrors } from '../lib/validate'
+import { solutionCrosses } from '../lib/solution'
 import { PlayerBoard } from './PlayerBoard'
 import { PersonaList } from './PersonaList'
 import type { PlaceMode } from './PersonaList'
@@ -22,6 +23,10 @@ interface PuzzlePlayerProps {
   onBack: () => void
   onEdit: () => void
 }
+
+// The revealed answer-key board never draws guesses — it's the author's committed
+// solution, not the player's working — so it always passes the same empty map.
+const NO_GUESSES: Record<string, string[]> = {}
 
 export function PuzzlePlayer({ puzzleId, onBack, onEdit }: PuzzlePlayerProps): JSX.Element {
   const { library, toggleGuess, setAnswer, toggleCross, clearBoard, setMurderer, setSolved } =
@@ -69,6 +74,10 @@ export function PuzzlePlayer({ puzzleId, onBack, onEdit }: PuzzlePlayerProps): J
   // edit to the solve (or a puzzle switch) drops the whole snapshot, so the marks
   // can never go stale. Re-run "Show errors" to see the updated state.
   const [errors, setErrors] = useState<SolveErrors | null>(null)
+  // Whether the author's answer key is revealed below the board. A give-up / check-
+  // yourself peek, collapsed by default and toggled by its button; reset whenever
+  // the puzzle changes so a switch never opens on someone else's solution.
+  const [showKey, setShowKey] = useState(false)
   const cursorRef = useRef<HTMLDivElement | null>(null)
 
   const puzzle = library.puzzles[puzzleId]
@@ -101,6 +110,7 @@ export function PuzzlePlayer({ puzzleId, onBack, onEdit }: PuzzlePlayerProps): J
     setActiveId(null)
     setCrossActive(false)
     setErrors(null)
+    setShowKey(false)
   }, [puzzleId])
 
   // Any edit to the player's solve invalidates the frozen "Show errors" snapshot,
@@ -177,6 +187,11 @@ export function PuzzlePlayer({ puzzleId, onBack, onEdit }: PuzzlePlayerProps): J
   // stored id to a live suspect so a stale one reads as no choice made.
   const suspects = suspectsOf(puzzle.personas)
   const murdererValue = suspects.some((s) => s.id === puzzle.murderer) ? puzzle.murderer! : ''
+
+  // The author's answer-key murderer, resolved for the reveal panel (null when the
+  // key names none). A stale id reads as "not set", same as the accusation picker.
+  const keyMurderer =
+    puzzle.personas.find((p) => p.id === puzzle.solutionMurderer) ?? null
 
   // The frozen "Show errors" snapshot, resolved for rendering: which answered
   // cells to redden, whether the accusation is flagged, and — when nothing was
@@ -388,10 +403,63 @@ export function PuzzlePlayer({ puzzleId, onBack, onEdit }: PuzzlePlayerProps): J
               >
                 {errors !== null ? 'Clear errors' : 'Show errors'}
               </button>
+              <button
+                type="button"
+                className={`btn${showKey ? ' is-active' : ''}`}
+                aria-pressed={showKey}
+                aria-expanded={showKey}
+                title={
+                  showKey
+                    ? 'Hide the answer key'
+                    : 'Reveal the author’s answer key board and murderer'
+                }
+                onClick={() => setShowKey((v) => !v)}
+              >
+                {showKey ? 'Hide answer key' : 'Show answer key'}
+              </button>
               {noErrorsFound && (
                 <span className="no-errors-note">No errors in your committed answers.</span>
               )}
             </div>
+
+            {showKey && (
+              <section className="answer-key" aria-label="Answer key">
+                <div className="answer-key-head">
+                  <h2 className="answer-key-title">Answer key</h2>
+                  <button
+                    type="button"
+                    className="btn btn-ghost btn-small"
+                    onClick={() => setShowKey(false)}
+                  >
+                    Collapse
+                  </button>
+                </div>
+                <div className="board-scroll">
+                  <PlayerBoard
+                    puzzle={puzzle}
+                    answers={puzzle.solution}
+                    guesses={NO_GUESSES}
+                    crosses={solutionCrosses(puzzle.solution, puzzle.cells, puzzle.objects)}
+                  />
+                </div>
+                <p className="answer-key-murderer">
+                  <span className="answer-key-murderer-label">The murderer is</span>{' '}
+                  {keyMurderer ? (
+                    <span
+                      className={`answer-key-murderer-name${
+                        keyMurderer.role === 'victim' ? ' is-victim' : ''
+                      }`}
+                    >
+                      {personaLabel(puzzle.personas, keyMurderer)} —{' '}
+                      {keyMurderer.name.trim() ||
+                        `Suspect ${personaLabel(puzzle.personas, keyMurderer)}`}
+                    </span>
+                  ) : (
+                    <span className="answer-key-murderer-none">not set by the author.</span>
+                  )}
+                </p>
+              </section>
+            )}
           </div>
         </div>
       ) : (
