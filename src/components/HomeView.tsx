@@ -7,7 +7,8 @@ interface HomeViewProps {
 }
 
 export function HomeView({ onPlay, onEdit }: HomeViewProps): JSX.Element {
-  const { library, addFolder, renameFolder, deleteFolder, addPuzzle, deletePuzzle } = useLibrary()
+  const { library, addFolder, renameFolder, deleteFolder, resetSolvedInFolder, addPuzzle, deletePuzzle } =
+    useLibrary()
   const [editingFolder, setEditingFolder] = useState<string | null>(null)
   const [draftName, setDraftName] = useState('')
 
@@ -38,7 +39,12 @@ export function HomeView({ onPlay, onEdit }: HomeViewProps): JSX.Element {
         </div>
       )}
 
-      {library.folders.map((folder) => (
+      {library.folders.map((folder) => {
+        const solvedCount = folder.puzzleIds.reduce(
+          (n, pid) => n + (library.puzzles[pid]?.solved ? 1 : 0),
+          0
+        )
+        return (
         <section key={folder.id} className="folder">
           <div className="folder-head">
             {editingFolder === folder.id ? (
@@ -69,6 +75,25 @@ export function HomeView({ onPlay, onEdit }: HomeViewProps): JSX.Element {
               >
                 + New puzzle
               </button>
+              {solvedCount > 0 && (
+                <button
+                  type="button"
+                  className="btn btn-small btn-ghost"
+                  title="Clear the solution and progress on every completed puzzle here so they can be replayed"
+                  onClick={() => {
+                    const plural = solvedCount === 1 ? 'puzzle' : 'puzzles'
+                    if (
+                      confirm(
+                        `Reset ${solvedCount} completed ${plural} in "${folder.name}" for replay? This clears their marks, accusations, and solved badges. In-progress puzzles are left alone.`
+                      )
+                    ) {
+                      resetSolvedInFolder(folder.id)
+                    }
+                  }}
+                >
+                  Reset all
+                </button>
+              )}
               <button
                 type="button"
                 className="btn btn-small btn-ghost"
@@ -127,7 +152,8 @@ export function HomeView({ onPlay, onEdit }: HomeViewProps): JSX.Element {
             </ul>
           )}
         </section>
-      ))}
+        )
+      })}
     </div>
   )
 }

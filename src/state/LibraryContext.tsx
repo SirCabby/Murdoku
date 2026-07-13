@@ -51,6 +51,7 @@ import {
 } from '../lib/solution'
 import { cellKey } from '../lib/coords'
 import { newId } from '../lib/id'
+import { clearHistory } from '../lib/historyStore'
 import { useFileSync } from './useFileSync'
 import type { FileSyncApi } from './useFileSync'
 
@@ -67,6 +68,14 @@ export interface LibraryApi {
   addFolder: (name: string) => Folder
   renameFolder: (folderId: string, name: string) => void
   deleteFolder: (folderId: string) => void
+  /**
+   * Reset every *completed* puzzle in a folder back to a fresh replay: clears each
+   * solved puzzle's play board (guesses, answers, crosses), its final accusation,
+   * and its sticky solved badge, and drops its undo history. In-progress (unsolved)
+   * puzzles in the folder are left untouched, as is all authoring content (shape,
+   * cast, hints, answer key). Returns how many puzzles were reset.
+   */
+  resetSolvedInFolder: (folderId: string) => number
   // Puzzles
   addPuzzle: (folderId: string, name: string) => Puzzle
   updatePuzzle: (puzzleId: string, patch: Partial<Puzzle>) => void
@@ -192,6 +201,37 @@ export function LibraryProvider({ children }: { children: ReactNode }): JSX.Elem
           if (folder) for (const id of folder.puzzleIds) delete puzzles[id]
           return { ...lib, folders: lib.folders.filter((f) => f.id !== folderId), puzzles }
         })
+      },
+
+      resetSolvedInFolder(folderId) {
+        const folder = library.folders.find((f) => f.id === folderId)
+        if (!folder) return 0
+        const solvedIds = folder.puzzleIds.filter((id) => library.puzzles[id]?.solved)
+        if (solvedIds.length === 0) return 0
+        setLibrary((lib) => {
+          const puzzles = { ...lib.puzzles }
+          const at = now()
+          for (const id of solvedIds) {
+            const p = puzzles[id]
+            if (!p) continue
+            // Back to the pristine play state a new puzzle starts with — authoring
+            // content (cells, walls, objects, personas, hints, answer key) untouched.
+            puzzles[id] = {
+              ...p,
+              guesses: {},
+              answers: {},
+              crosses: {},
+              murderer: null,
+              solved: false,
+              updatedAt: at,
+            }
+          }
+          return { ...lib, puzzles }
+        })
+        // Drop each reset puzzle's undo trail so the finished solve can't be undone
+        // back into place the next time it's opened.
+        for (const id of solvedIds) clearHistory(id)
+        return solvedIds.length
       },
 
       addPuzzle(folderId, name) {

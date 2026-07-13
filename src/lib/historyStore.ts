@@ -72,3 +72,16 @@ export function saveHistory(puzzle: Puzzle, history: History): void {
     // Storage full / unavailable (e.g. private mode). Non-fatal.
   }
 }
+
+/**
+ * Discard a puzzle's stored undo/redo timeline entirely. Used when a puzzle is
+ * reset for a fresh replay, so the finished solve can't linger in the undo buffer
+ * and be restored a step later. The player rebuilds an empty timeline on next open.
+ */
+export function clearHistory(puzzleId: string): void {
+  try {
+    localStorage.removeItem(KEY_PREFIX + puzzleId)
+  } catch {
+    // Storage unavailable (e.g. private mode). Non-fatal.
+  }
+}
