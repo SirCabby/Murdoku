@@ -244,6 +244,23 @@ body {
   background: var(--accent); color: var(--accent-ink);
 }
 .guess-chip-victim { background: var(--panel-2); color: var(--text); border: 1px solid var(--line-strong); }
+
+/* A committed answer: one big persona letter in a chip centered in the play cell
+   — a scaled-up sibling of the guess chip. Click-through like the guess grid so
+   the cell button beneath keeps the placement gesture. An answered cell hides its
+   guess grid, so the two never overlap. */
+.cell-answer {
+  position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); z-index: 9;
+  /* padding-top optically centers the letter: a lone capital has empty descender
+     space below the baseline that pulls its ink above the box centre, so nudge it
+     back down by ~half the descender (measured ~1.4px at this size). */
+  min-width: 42px; height: 42px; padding: 3px 8px 0; border-radius: 9px;
+  display: inline-flex; align-items: center; justify-content: center;
+  font-size: 24px; font-weight: 800; line-height: 1; letter-spacing: 0.01em;
+  background: var(--accent); color: var(--accent-ink); pointer-events: none;
+}
+.cell-answer-victim { background: var(--panel-2); color: var(--text); border: 1px solid var(--line-strong); }
+
 /* When a persona is picked up the whole board reads as "placing". */
 .player-board.is-placing .cell { cursor: crosshair; }
 
@@ -253,6 +270,8 @@ body {
   min-width: 22px; height: 22px; font-size: 13px;
   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.35);
 }
+/* In answer mode the cursor chip is larger, cueing the big-letter placement. */
+.guess-cursor-answer .guess-chip { min-width: 30px; height: 30px; font-size: 18px; }
 
 /* ---- Walls (room boundaries) ---- */
 /* Player: read-only lines straddling the gridline between two cells. */
@@ -448,6 +467,14 @@ body {
   display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px;
 }
 .persona-list-title { grid-column: 1 / -1; margin: 0 0 2px; font-size: 15px; }
+/* Guess/Answer selector: whether a cell click drops a tentative letter or commits one. */
+.place-mode { grid-column: 1 / -1; display: flex; align-items: center; gap: 8px; }
+.place-mode-label { font-size: 12px; color: var(--muted); }
+.place-mode-select {
+  flex: 1; padding: 6px 8px; border-radius: 6px;
+  border: 1px solid var(--line-strong); background: var(--panel-2); color: var(--text);
+  font: inherit; font-size: 13px; cursor: pointer;
+}
 .persona-list-hint { grid-column: 1 / -1; margin: 0 0 4px; font-size: 12px; color: var(--muted); }
 .persona-list .persona-card { padding: 10px; gap: 10px; }
 .persona-read { min-width: 0; display: flex; flex-direction: column; gap: 3px; }

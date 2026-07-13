@@ -11,11 +11,11 @@ interface PlayerBoardProps {
   puzzle: Puzzle
   /**
    * The persona currently picked up as the placement tool, if any. When set the
-   * board reads as "placing" (crosshair cursor) and a cell click fires `onGuess`.
+   * board reads as "placing" (crosshair cursor) and a cell click fires `onPlace`.
    */
   activePersonaId?: string | null
-  /** Toggle the active persona's guess in a cell. Omit to render the board read-only. */
-  onGuess?: ((x: number, y: number) => void) | undefined
+  /** Place the active persona in a cell (guess or answer, per the player's mode). Omit for read-only. */
+  onPlace?: ((x: number, y: number) => void) | undefined
   /** Edit a cell's note. Omit to disable notes. */
   onNote?: ((x: number, y: number, note: string) => void) | undefined
 }
@@ -30,12 +30,13 @@ const PAD = 1
  * positions, so notches/holes show up as gaps rather than being collapsed away.
  * Objects, windows, and room names are drawn over the cells exactly as the
  * editor's read-only decor does, so the played board matches the edited one.
- * Placement guesses are drawn inside each cell as a small grid of persona letters.
+ * A cell's committed answer fills it with one large persona letter; an unanswered
+ * cell instead shows its tentative guesses as a small grid of persona letters.
  */
 export function PlayerBoard({
   puzzle,
   activePersonaId,
-  onGuess,
+  onPlace,
   onNote,
 }: PlayerBoardProps): JSX.Element | null {
   const keys = Object.keys(puzzle.cells)
@@ -62,17 +63,24 @@ export function PlayerBoard({
   ]
   ordered.forEach((p, i) => order.set(p.id, i))
 
+  function chipFor(id: string): GuessChip | null {
+    const p = byId.get(id)
+    if (!p) return null
+    return { id: p.id, label: personaLabel(puzzle.personas, p), isVictim: p.role === 'victim' }
+  }
+
   function chipsFor(key: string): GuessChip[] {
     const ids = puzzle.guesses[key] ?? []
     return ids
-      .map((id) => byId.get(id))
-      .filter((p): p is Persona => Boolean(p))
-      .map((p) => ({
-        id: p.id,
-        label: personaLabel(puzzle.personas, p),
-        isVictim: p.role === 'victim',
-      }))
+      .map((id) => chipFor(id))
+      .filter((c): c is GuessChip => Boolean(c))
       .sort((a, b) => (order.get(a.id) ?? 0) - (order.get(b.id) ?? 0))
+  }
+
+  // The one committed answer for a cell, drawn as a big letter (null if none).
+  function answerFor(key: string): GuessChip | null {
+    const id = puzzle.answers[key]
+    return id ? chipFor(id) : null
   }
 
   const placing = Boolean(activePersonaId)
@@ -92,7 +100,8 @@ export function PlayerBoard({
             <Cell
               state={state}
               guesses={chipsFor(key)}
-              onPlace={placing && onGuess ? () => onGuess(x, y) : undefined}
+              answer={answerFor(key)}
+              onPlace={placing && onPlace ? () => onPlace(x, y) : undefined}
               onNote={onNote ? (note) => onNote(x, y, note) : undefined}
             />
           </div>

@@ -43,6 +43,19 @@ export function toggleGuess(
   return next
 }
 
+/** Remove every guess at a cell, if any (returns the same map when there are none). */
+export function clearGuessesAt(
+  guesses: Record<string, string[]>,
+  x: number,
+  y: number
+): Record<string, string[]> {
+  const key = cellKey(x, y)
+  if (!(key in guesses)) return guesses
+  const next = { ...guesses }
+  delete next[key]
+  return next
+}
+
 /** Drop guesses for any cell no longer in the shape. */
 export function pruneGuesses(
   guesses: Record<string, string[]>,

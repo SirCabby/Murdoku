@@ -3,6 +3,7 @@ import { useLibrary } from '../state/LibraryContext'
 import { personaLabel } from '../lib/personas'
 import { PlayerBoard } from './PlayerBoard'
 import { PersonaList } from './PersonaList'
+import type { PlaceMode } from './PersonaList'
 
 interface PuzzlePlayerProps {
   puzzleId: string
@@ -11,11 +12,13 @@ interface PuzzlePlayerProps {
 }
 
 export function PuzzlePlayer({ puzzleId, onBack, onEdit }: PuzzlePlayerProps): JSX.Element {
-  const { library, toggleGuess } = useLibrary()
+  const { library, toggleGuess, setAnswer } = useLibrary()
 
   // The persona picked up as the placement tool. Its letter rides the cursor and
-  // clicking a cell adds/removes that guess. Cleared on Esc or when the puzzle changes.
+  // clicking a cell places that persona. Cleared on Esc or when the puzzle changes.
   const [activeId, setActiveId] = useState<string | null>(null)
+  // Whether a click drops a tentative guess or commits a definitive answer.
+  const [mode, setMode] = useState<PlaceMode>('guess')
   const cursorRef = useRef<HTMLDivElement | null>(null)
 
   const puzzle = library.puzzles[puzzleId]
@@ -80,14 +83,19 @@ export function PuzzlePlayer({ puzzleId, onBack, onEdit }: PuzzlePlayerProps): J
             personas={puzzle.personas}
             activeId={activePersona ? activeId : null}
             onPick={(id) => setActiveId((prev) => (prev === id ? null : id))}
+            mode={mode}
+            onModeChange={setMode}
           />
           <div className="board-scroll">
             <PlayerBoard
               puzzle={puzzle}
               activePersonaId={activePersona ? activeId : null}
-              onGuess={
+              onPlace={
                 activePersona
-                  ? (x, y) => toggleGuess(puzzleId, x, y, activePersona.id)
+                  ? (x, y) =>
+                      mode === 'answer'
+                        ? setAnswer(puzzleId, x, y, activePersona.id)
+                        : toggleGuess(puzzleId, x, y, activePersona.id)
                   : undefined
               }
             />
@@ -101,7 +109,11 @@ export function PuzzlePlayer({ puzzleId, onBack, onEdit }: PuzzlePlayerProps): J
       )}
 
       {activePersona && (
-        <div ref={cursorRef} className="guess-cursor" aria-hidden="true">
+        <div
+          ref={cursorRef}
+          className={`guess-cursor${mode === 'answer' ? ' guess-cursor-answer' : ''}`}
+          aria-hidden="true"
+        >
           <span
             className={`guess-chip${activePersona.role === 'victim' ? ' guess-chip-victim' : ''}`}
           >

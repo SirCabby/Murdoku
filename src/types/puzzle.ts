@@ -128,6 +128,16 @@ export interface Puzzle {
    * entry, and removing a persona strips its id from every cell.
    */
   guesses: Record<string, string[]>
+  /**
+   * The player's definitive answers: the one persona they've committed to for a
+   * cell. Keyed by `"x,y"` (always an existing cell) to a single persona id —
+   * unlike `guesses`, at most one per cell, mirroring `objects`. An answer and a
+   * guess are mutually exclusive in a cell: committing an answer clears that
+   * cell's guesses, and adding a guess clears its answer. The letter shown is
+   * derived from the id (see `lib/personas.ts`), never stored. Removing a cell
+   * drops its entry, and removing a persona clears any answer naming it.
+   */
+  answers: Record<string, string>
   createdAt: number
   updatedAt: number
 }
@@ -141,7 +151,7 @@ export interface Folder {
 
 /** The entire persisted library — one blob in localStorage / a save file. */
 export interface Library {
-  version: 8
+  version: 9
   folders: Folder[]
   puzzles: Record<string, Puzzle>
 }

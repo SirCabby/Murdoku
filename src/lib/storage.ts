@@ -10,10 +10,11 @@ import { newId } from './id'
 // will additionally sync this blob to the connected save file (see lib/gst.ts);
 // that hook is intentionally not wired up yet.
 
-const STORAGE_KEY = 'murdoku.library.v8'
+const STORAGE_KEY = 'murdoku.library.v9'
 // Older blobs still sitting in some users' storage, newest first. Each is
 // upgraded forward by `coerceLibrary` and then removed once read.
 const LEGACY_KEYS = [
+  'murdoku.library.v8',
   'murdoku.library.v7',
   'murdoku.library.v6',
   'murdoku.library.v5',
@@ -23,7 +24,7 @@ const LEGACY_KEYS = [
 ]
 
 export function emptyLibrary(): Library {
-  return { version: 8, folders: [], puzzles: {} }
+  return { version: 9, folders: [], puzzles: {} }
 }
 
 export function loadLibrary(): Library {
@@ -67,24 +68,25 @@ export function parseLibrary(text: string): Library {
 
 /**
  * Validate an already-parsed value and normalize it to the current Library
- * shape, or return null if it isn't one. Accepts the current version (8) and
+ * shape, or return null if it isn't one. Accepts the current version (9) and
  * upgrades older blobs forward one step at a time: v2 (no walls) → v3 (no
  * objects) → v4 (no room labels) → v5 (labels mid-cell) → v6 (labels snapped to
- * bottom walls) → v7 (no personas) → v8 (no persona guesses). Validation is
- * shallow — the same trust level the app has always applied to its own
- * localStorage blob.
+ * bottom walls) → v7 (no personas) → v8 (no persona guesses) → v9 (no persona
+ * answers). Validation is shallow — the same trust level the app has always
+ * applied to its own localStorage blob.
  */
 function coerceLibrary(value: unknown): Library | null {
   if (!value || typeof value !== 'object') return null
   const v = value as { version?: unknown; folders?: unknown }
   if (!Array.isArray(v.folders)) return null
-  if (v.version === 8) return value as Library
-  if (v.version === 7) return upgradeV7(value as LibraryV7)
-  if (v.version === 6) return upgradeV7(upgradeV6(value as LibraryV6))
-  if (v.version === 5) return upgradeV7(upgradeV6(upgradeV5(value as LibraryV5)))
-  if (v.version === 4) return upgradeV7(upgradeV6(upgradeV5(upgradeV4(value as LibraryV4))))
-  if (v.version === 3) return upgradeV7(upgradeV6(upgradeV5(upgradeV4(upgradeV3(value as LibraryV3)))))
-  if (v.version === 2) return upgradeV7(upgradeV6(upgradeV5(upgradeV4(upgradeV3(upgradeV2(value as LibraryV2))))))
+  if (v.version === 9) return value as Library
+  if (v.version === 8) return upgradeV8(value as LibraryV8)
+  if (v.version === 7) return upgradeV8(upgradeV7(value as LibraryV7))
+  if (v.version === 6) return upgradeV8(upgradeV7(upgradeV6(value as LibraryV6)))
+  if (v.version === 5) return upgradeV8(upgradeV7(upgradeV6(upgradeV5(value as LibraryV5))))
+  if (v.version === 4) return upgradeV8(upgradeV7(upgradeV6(upgradeV5(upgradeV4(value as LibraryV4)))))
+  if (v.version === 3) return upgradeV8(upgradeV7(upgradeV6(upgradeV5(upgradeV4(upgradeV3(value as LibraryV3))))))
+  if (v.version === 2) return upgradeV8(upgradeV7(upgradeV6(upgradeV5(upgradeV4(upgradeV3(upgradeV2(value as LibraryV2)))))))
   return null
 }
 
@@ -150,12 +152,25 @@ function upgradeV6(old: LibraryV6): LibraryV7 {
  * are play state the author never sets, so every migrated puzzle simply starts
  * with none.
  */
-function upgradeV7(old: LibraryV7): Library {
-  const puzzles: Record<string, Puzzle> = {}
+function upgradeV7(old: LibraryV7): LibraryV8 {
+  const puzzles: Record<string, PuzzleV8> = {}
   for (const [id, p] of Object.entries(old.puzzles)) {
     puzzles[id] = { ...p, guesses: {} }
   }
   return { version: 8, folders: old.folders, puzzles }
+}
+
+/**
+ * Add an empty `answers` map to every puzzle, taking v8 to v9. Definitive
+ * answers are play state the author never sets, so every migrated puzzle simply
+ * starts with none.
+ */
+function upgradeV8(old: LibraryV8): Library {
+  const puzzles: Record<string, Puzzle> = {}
+  for (const [id, p] of Object.entries(old.puzzles)) {
+    puzzles[id] = { ...p, answers: {} }
+  }
+  return { version: 9, folders: old.folders, puzzles }
 }
 
 /** A pre-walls (version 2) puzzle, as it still sits in some users' storage. */
@@ -228,6 +243,17 @@ interface LibraryV7 {
   version: 7
   folders: Folder[]
   puzzles: Record<string, PuzzleV7>
+}
+
+/** A version-8 puzzle — has placement guesses but no definitive answers yet. */
+interface PuzzleV8 extends PuzzleV7 {
+  guesses: Record<string, string[]>
+}
+
+interface LibraryV8 {
+  version: 8
+  folders: Folder[]
+  puzzles: Record<string, PuzzleV8>
 }
 
 export function saveLibrary(library: Library): void {
@@ -321,11 +347,17 @@ function seedLibrary(): Library {
     [cellKey(4, 1)]: [boddy.id],
   }
 
+  // One committed answer, showing the big-letter placement next to the small
+  // guesses. A guess and an answer never share a cell, so this sits on its own.
+  const answers: Record<string, string> = {
+    [cellKey(0, 2)]: mustard.id,
+  }
+
   const puzzleId = newId()
   const folderId = newId()
 
   return {
-    version: 8,
+    version: 9,
     folders: [{ id: folderId, name: 'My Cases', puzzleIds: [puzzleId] }],
     puzzles: {
       [puzzleId]: {
@@ -338,6 +370,7 @@ function seedLibrary(): Library {
         labels,
         personas,
         guesses,
+        answers,
         createdAt: 0,
         updatedAt: 0,
       },

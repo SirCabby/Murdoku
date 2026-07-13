@@ -14,18 +14,24 @@ interface CellProps {
   state: CellState
   /** Persona-letter guesses shown as a mini grid inside the cell (display order). */
   guesses?: GuessChip[] | undefined
-  /** Left-click handler that adds/removes the active persona guess. Omit for read-only. */
+  /**
+   * The cell's committed answer, if any, drawn as one large letter. An answered
+   * cell hides its guess grid — the two are mutually exclusive.
+   */
+  answer?: GuessChip | null | undefined
+  /** Left-click handler that places the active persona (guess or answer). Omit for read-only. */
   onPlace?: (() => void) | undefined
   /** Right-click handler that edits the cell's note. Omit to disable notes. */
   onNote?: ((note: string) => void) | undefined
 }
 
 /**
- * One playable square. Left-click places/removes the active persona guess (when
- * a persona is picked up); right-click edits the cell's note. Any guesses placed
- * here are drawn as a small grid of letter chips filling the cell.
+ * One playable square. Left-click places the active persona (when one is picked
+ * up) as either a tentative guess or a committed answer; right-click edits the
+ * cell's note. A committed answer fills the cell as one large letter; otherwise
+ * any guesses are drawn as a small grid of letter chips.
  */
-export function Cell({ state, guesses, onPlace, onNote }: CellProps): JSX.Element {
+export function Cell({ state, guesses, answer, onPlace, onNote }: CellProps): JSX.Element {
   const [editing, setEditing] = useState(false)
   const [draft, setDraft] = useState(state.note)
   const textareaRef = useRef<HTMLTextAreaElement | null>(null)
@@ -48,7 +54,8 @@ export function Cell({ state, guesses, onPlace, onNote }: CellProps): JSX.Elemen
   }
 
   const hasNote = state.note.length > 0
-  const chips = guesses ?? []
+  // A committed answer takes the cell over; only when unanswered do guesses show.
+  const chips = answer ? [] : guesses ?? []
   // Square-ish layout: √n columns fits the letters into a compact block.
   const cols = chips.length > 0 ? Math.ceil(Math.sqrt(chips.length)) : 1
 
@@ -62,6 +69,14 @@ export function Cell({ state, guesses, onPlace, onNote }: CellProps): JSX.Elemen
         onContextMenu={onNote ? openNote : undefined}
       >
         <span className="cell-glyph">{MARK_GLYPH[state.mark]}</span>
+        {answer && (
+          <span
+            className={`cell-answer${answer.isVictim ? ' cell-answer-victim' : ''}`}
+            aria-hidden="true"
+          >
+            {answer.label}
+          </span>
+        )}
         {chips.length > 0 && (
           <span
             className="guess-grid"
