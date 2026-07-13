@@ -10,7 +10,8 @@ import {
   saveShowSummaries,
 } from '../lib/prefs'
 import { usePlayHistory } from '../state/usePlayHistory'
-import { validateSolve } from '../lib/validate'
+import { solveErrors, validateSolve } from '../lib/validate'
+import type { SolveErrors } from '../lib/validate'
 import { PlayerBoard } from './PlayerBoard'
 import { PersonaList } from './PersonaList'
 import type { PlaceMode } from './PersonaList'
@@ -62,6 +63,12 @@ export function PuzzlePlayer({ puzzleId, onBack, onEdit }: PuzzlePlayerProps): J
   // Holding Shift temporarily flips guess↔answer, so you can drop the opposite of
   // the picked mode without touching the dropdown.
   const [shiftHeld, setShiftHeld] = useState(false)
+  // A frozen snapshot of which committed answers (and the accusation) contradict
+  // the answer key, captured when the player hits "Show errors"; null = not shown.
+  // Not a live checker: it never restyles as the board changes — instead *any*
+  // edit to the solve (or a puzzle switch) drops the whole snapshot, so the marks
+  // can never go stale. Re-run "Show errors" to see the updated state.
+  const [errors, setErrors] = useState<SolveErrors | null>(null)
   const cursorRef = useRef<HTMLDivElement | null>(null)
 
   const puzzle = library.puzzles[puzzleId]
@@ -93,7 +100,17 @@ export function PuzzlePlayer({ puzzleId, onBack, onEdit }: PuzzlePlayerProps): J
   useEffect(() => {
     setActiveId(null)
     setCrossActive(false)
+    setErrors(null)
   }, [puzzleId])
+
+  // Any edit to the player's solve invalidates the frozen "Show errors" snapshot,
+  // so drop it — a since-fixed cell must not keep its red, and a stale ✕ must not
+  // linger past changing the accusation. Keyed on exactly the maps + accusation the
+  // snapshot reads; "Show errors" touches none of them, so capturing errors never
+  // re-triggers this.
+  useEffect(() => {
+    setErrors(null)
+  }, [puzzle?.guesses, puzzle?.answers, puzzle?.crosses, puzzle?.murderer])
 
   // Esc puts the picked-up tool down.
   useEffect(() => {
@@ -161,6 +178,12 @@ export function PuzzlePlayer({ puzzleId, onBack, onEdit }: PuzzlePlayerProps): J
   const suspects = suspectsOf(puzzle.personas)
   const murdererValue = suspects.some((s) => s.id === puzzle.murderer) ? puzzle.murderer! : ''
 
+  // The frozen "Show errors" snapshot, resolved for rendering: which answered
+  // cells to redden, whether the accusation is flagged, and — when nothing was
+  // wrong — a note so the button doesn't read as broken.
+  const errorKeys = errors ? new Set(errors.cells) : null
+  const noErrorsFound = errors !== null && errors.cells.length === 0 && !errors.murderer
+
   // Grade the whole solve against the author's answer key and report it. On a
   // correct solve, flip the sticky "solved" badge (the green check by the name);
   // every other outcome just explains what's still wrong via a popup.
@@ -187,6 +210,14 @@ export function PuzzlePlayer({ puzzleId, onBack, onEdit }: PuzzlePlayerProps): J
         alert('🎉 Case solved! Everyone’s in the right place and you named the right murderer.')
         return
     }
+  }
+
+  // Snapshot the current mistakes and paint them: wrong committed answers turn red
+  // on the board, a wrong accusation reddens the picker. A one-shot capture, not a
+  // live checker — the marks hold until the player clears them (the button toggles
+  // to "Clear errors") or edits the solve, which drops the snapshot wholesale.
+  function showErrors(): void {
+    setErrors(solveErrors(puzzle!))
   }
 
   return (
@@ -291,6 +322,7 @@ export function PuzzlePlayer({ puzzleId, onBack, onEdit }: PuzzlePlayerProps): J
                 active={holdingTool}
                 summaries={summaries}
                 highlightId={highlight && activePersona ? activeId : null}
+                errorKeys={errorKeys ?? undefined}
                 onPlace={
                   holdingTool
                     ? (x, y) => {
@@ -310,7 +342,7 @@ export function PuzzlePlayer({ puzzleId, onBack, onEdit }: PuzzlePlayerProps): J
               </label>
               <select
                 id="murderer-select"
-                className="murderer-select"
+                className={`murderer-select${errors?.murderer ? ' murderer-select-error' : ''}`}
                 value={murdererValue}
                 onChange={(e) => setMurderer(puzzleId, e.target.value || null)}
               >
@@ -325,6 +357,15 @@ export function PuzzlePlayer({ puzzleId, onBack, onEdit }: PuzzlePlayerProps): J
                   )
                 })}
               </select>
+              {errors?.murderer && (
+                <span
+                  className="murderer-error-x"
+                  title="That’s not the murderer"
+                  aria-label="Wrong murderer"
+                >
+                  ✕
+                </span>
+              )}
             </div>
             <div className="validate-row">
               <button type="button" className="btn btn-primary" onClick={handleValidate}>
@@ -334,6 +375,21 @@ export function PuzzlePlayer({ puzzleId, onBack, onEdit }: PuzzlePlayerProps): J
                 <span className="solved-flag">
                   <span className="solved-check" aria-hidden="true">✓</span> Solved
                 </span>
+              )}
+              <button
+                type="button"
+                className="btn"
+                onClick={errors !== null ? () => setErrors(null) : showErrors}
+                title={
+                  errors !== null
+                    ? 'Hide the error highlighting'
+                    : 'Redden the committed answers that don’t match the solution (a one-time snapshot)'
+                }
+              >
+                {errors !== null ? 'Clear errors' : 'Show errors'}
+              </button>
+              {noErrorsFound && (
+                <span className="no-errors-note">No errors in your committed answers.</span>
               )}
             </div>
           </div>

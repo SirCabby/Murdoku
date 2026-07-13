@@ -38,6 +38,13 @@ interface PlayerBoardProps {
   answers?: Record<string, string> | undefined
   guesses?: Record<string, string[]> | undefined
   crosses?: Record<string, true> | undefined
+  /**
+   * Cell keys whose committed answer contradicts the answer key, from play mode's
+   * "Show errors" snapshot: each is drawn with a red error treatment. A frozen
+   * snapshot the caller captured, not a live check — the board never recomputes
+   * it. Omit for no error highlight.
+   */
+  errorKeys?: ReadonlySet<string> | undefined
   /** Place the active tool in a cell (guess, answer, or X, per the player's mode). Omit for read-only. */
   onPlace?: ((x: number, y: number) => void) | undefined
 }
@@ -65,6 +72,7 @@ export function PlayerBoard({
   answers: answersProp,
   guesses: guessesProp,
   crosses: crossesProp,
+  errorKeys,
   onPlace,
 }: PlayerBoardProps): JSX.Element | null {
   // Which layer to draw: the puzzle's own play state unless the caller overrides
@@ -177,6 +185,7 @@ export function PlayerBoard({
               answer={answerFor(key)}
               cross={crosses[key] === true}
               highlightId={highlightId}
+              error={errorKeys?.has(key) ?? false}
               onPlace={placing && !blocked && onPlace ? () => onPlace(x, y) : undefined}
             />
           </div>

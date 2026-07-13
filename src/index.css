@@ -15,6 +15,8 @@
   --highlight: #fb923c;   /* the picked-up persona's own marks, orange over blue/purple */
   --highlight-ink: #2b1400;
   --solved: #3fbf74;      /* the "case solved" green check by a puzzle's name */
+  --error: #e5484d;       /* a wrong committed answer / accusation under "Show errors" */
+  --error-ink: #ffffff;
 
   --cell-bg: #191c24;
   --cell-hover: #2a3040;
@@ -56,6 +58,8 @@
     --highlight: #ea580c;
     --highlight-ink: #ffffff;
     --solved: #1f9d57;
+    --error: #d13438;
+    --error-ink: #ffffff;
 
     --cell-bg: #ffffff;
     --cell-hover: #e9eefb;
@@ -291,6 +295,13 @@ body {
 }
 .cell-answer-victim { background: var(--victim); color: var(--victim-ink); }
 .cell-answer-highlight { background: var(--highlight); color: var(--highlight-ink); }
+/* A committed answer the "Show errors" snapshot found wrong: red, overriding the
+   blue/purple/orange above (defined after them so it wins on equal specificity),
+   with a ring so it pops against the correct placements around it. */
+.cell-answer-error {
+  background: var(--error); color: var(--error-ink);
+  box-shadow: 0 0 0 2px color-mix(in srgb, var(--error) 45%, transparent);
+}
 /* A crossed-out cell: the same box as an answer, greyed (like the victim, but a
    muted X rather than a persona letter). */
 .cell-answer-cross { background: var(--panel-2); color: var(--muted); border: 1px solid var(--line-strong); }
@@ -614,6 +625,10 @@ body {
   padding: 8px 10px; font: inherit; font-size: 14px; cursor: pointer;
 }
 .murderer-select:hover { border-color: var(--accent); }
+/* A wrong accusation under "Show errors": the picker reddens and an ✕ sits beside
+   it (in the flex row, right of the box). */
+.murderer-select-error { border-color: var(--error); box-shadow: 0 0 0 1px var(--error); }
+.murderer-error-x { color: var(--error); font-weight: 800; font-size: 20px; line-height: 1; }
 
 /* Grade-your-solve control below the accusation, plus the "case solved" badge:
    a green check before a puzzle's name (play header and home cards) and the
@@ -622,6 +637,8 @@ body {
 .solved-check { color: var(--solved); font-weight: 800; margin-right: 6px; }
 .solved-flag { display: inline-flex; align-items: center; gap: 4px; color: var(--solved); font-weight: 600; font-size: 14px; }
 .solved-flag .solved-check { margin-right: 0; }
+/* Reassurance when "Show errors" turned up nothing wrong in the committed answers. */
+.no-errors-note { color: var(--muted); font-size: 14px; }
 .persona-list {
   flex: none; width: 340px; max-width: 100%;
   display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px;

@@ -28,6 +28,13 @@ interface CellProps {
    * its existing placements stand out. Omit / null for no highlight.
    */
   highlightId?: string | null | undefined
+  /**
+   * Whether this cell's committed answer contradicts the answer key — drawn with a
+   * red "error" treatment. Set by play mode's "Show errors" snapshot; only an
+   * answered cell is ever flagged (guesses and crosses aren't). Omit / false
+   * otherwise.
+   */
+  error?: boolean | undefined
   /** Left-click handler that places the active tool (guess, answer, or X). Omit for read-only. */
   onPlace?: (() => void) | undefined
 }
@@ -38,7 +45,7 @@ interface CellProps {
  * committed answer fills the cell as one large letter (X > answer); otherwise any
  * guesses are drawn as a small grid of chips.
  */
-export function Cell({ state, guesses, answer, cross, highlightId, onPlace }: CellProps): JSX.Element {
+export function Cell({ state, guesses, answer, cross, highlightId, error, onPlace }: CellProps): JSX.Element {
   // Precedence: an X or a committed answer takes the cell over (X wins); only a
   // bare cell shows its guesses.
   const showAnswer = !cross && Boolean(answer)
@@ -69,7 +76,8 @@ export function Cell({ state, guesses, answer, cross, highlightId, onPlace }: Ce
           <span
             className={
               `cell-answer${answer.isVictim ? ' cell-answer-victim' : ''}` +
-              `${answer.id === highlightId ? ' cell-answer-highlight' : ''}`
+              `${answer.id === highlightId ? ' cell-answer-highlight' : ''}` +
+              `${error ? ' cell-answer-error' : ''}`
             }
             aria-hidden="true"
           >

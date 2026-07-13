@@ -55,6 +55,32 @@ export function validateSolve(puzzle: Puzzle): ValidateResult {
   return { status: correct ? 'solved' : 'incorrect' }
 }
 
+/** The wrong-but-committed parts of a solve, for play mode's "Show errors". */
+export interface SolveErrors {
+  /** Cell keys whose committed answer names the wrong persona for that square. */
+  cells: string[]
+  /** True when a suspect is accused but it isn't the key's murderer. */
+  murderer: boolean
+}
+
+/**
+ * Snapshot which of the player's *committed* placements contradict the answer
+ * key — the data behind the play view's "Show errors" highlight. Only definitive
+ * answers count (tentative guesses are pencil marks, never flagged), and an
+ * unanswered cell or an un-made accusation is "not finished", not an error, so
+ * neither is reported. Pure and side-effect-free; the caller freezes the result
+ * so the highlight stays put until it's re-run or cleared, rather than tracking
+ * the board live.
+ */
+export function solveErrors(puzzle: Puzzle): SolveErrors {
+  const cells: string[] = []
+  for (const [key, id] of Object.entries(puzzle.answers)) {
+    if (puzzle.solution[key] !== id) cells.push(key)
+  }
+  const murderer = puzzle.murderer !== null && puzzle.murderer !== puzzle.solutionMurderer
+  return { cells, murderer }
+}
+
 /** Whether two cell→persona maps hold exactly the same entries. */
 function sameMap(a: Record<string, string>, b: Record<string, string>): boolean {
   const keys = Object.keys(a)
