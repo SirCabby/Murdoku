@@ -231,6 +231,75 @@ body {
 .wtarget-h::after { left: 0; right: 0; top: 50%; height: var(--wall-thick); transform: translateY(-50%); }
 .wtarget:hover::after { opacity: 0.45; }
 .wtarget.on::after { opacity: 1; }
+/* Window edge targets reuse the wall-target geometry, tinted with the accent. */
+.wtarget.window::after { background: var(--accent); }
+
+/* ---- Objects (furnishings) ---- */
+/* Object mode lays the shape out as a warm "room floor" so the artwork (which
+   uses light, floor-tinted fills like the source site) stays legible in either
+   app theme. The floor is deliberately theme-independent. */
+.objects-board {
+  touch-action: none;
+  --floor: #d8c49c;
+  --floor-hi: #e3d2ac;
+  --floor-line: #c3ad82;
+}
+.ocell {
+  position: relative;
+  width: var(--cell); height: var(--cell); padding: 3px;
+  border: 1px solid var(--floor-line); background: var(--floor);
+  display: flex; align-items: center; justify-content: center;
+}
+.ocell-btn { cursor: pointer; }
+.ocell-btn:hover { background: var(--floor-hi); }
+
+/* Centered standalone icon vs. edge-to-edge autotile piece. */
+.obj-fit {
+  max-width: 100%; max-height: 100%; width: auto; height: auto;
+  pointer-events: none; filter: drop-shadow(0 0 0.6px rgba(20, 20, 22, 0.55));
+}
+.obj-fill { display: block; width: 100%; height: 100%; pointer-events: none; }
+
+/* Carpet/table tiles abut with no border or padding so a run reads as one piece;
+   the floor still shows through the tile art's transparent parts. */
+.ocell-tile { padding: 0; border-color: transparent; }
+/* Bed squares are just seamless floor; the spanning domino image draws the bed. */
+.ocell-bed { padding: 0; border-color: transparent; }
+.bed-span {
+  z-index: 4; pointer-events: none;
+  width: 100%; height: 100%; object-fit: contain;
+  filter: drop-shadow(0 1px 1px rgba(20, 20, 22, 0.35));
+}
+
+/* A placed window: the site's window artwork sitting on its wall, rotated to run
+   along a vertical edge. */
+.window-icon {
+  z-index: 8; pointer-events: none; width: 78%; height: auto;
+  filter: drop-shadow(0 0 0.5px rgba(20, 20, 22, 0.6));
+}
+.window-icon-h { justify-self: center; align-self: end; transform: translateY(50%); }
+.window-icon-v { justify-self: end; align-self: center; transform: translateX(50%) rotate(90deg); }
+
+/* ---- Object palette ---- */
+.palette {
+  display: flex; align-items: center; gap: 6px; flex-wrap: wrap;
+  margin: 0 0 4px; max-width: 640px;
+}
+.ptool {
+  display: inline-flex; align-items: center; gap: 6px;
+  background: var(--panel-2); color: var(--text);
+  border: 1px solid var(--line); border-radius: 8px;
+  padding: 4px 10px 4px 7px; font: inherit; font-size: 13px; cursor: pointer;
+}
+.ptool:hover { border-color: var(--line-strong); }
+.ptool.active { border-color: transparent; background: var(--accent); color: var(--accent-ink); font-weight: 600; }
+.ptool-icon {
+  width: 20px; height: 20px; object-fit: contain;
+  filter: drop-shadow(0 0 0.5px rgba(20, 20, 22, 0.55));
+}
+.ptool-glyph { font-size: 16px; line-height: 1; width: 20px; text-align: center; }
+.ptool-erase .ptool-glyph { font-size: 15px; }
+.palette-sep { width: 1px; align-self: stretch; background: var(--line); margin: 2px 2px; }
 
 /* ---- Note popover ---- */
 .note-popover {

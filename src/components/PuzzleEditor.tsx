@@ -1,14 +1,18 @@
 import { useState } from 'react'
 import { useLibrary } from '../state/LibraryContext'
+import { CELL_OBJECT_KINDS, OBJECT_LABEL } from '../lib/objects'
+import { baseIconUrl } from '../lib/objectAssets'
 import { EditorBoard } from './EditorBoard'
 import { WallsBoard } from './WallsBoard'
+import { ObjectsBoard } from './ObjectsBoard'
+import type { ObjectTool } from './ObjectsBoard'
 
 interface PuzzleEditorProps {
   puzzleId: string
   onDone: () => void
 }
 
-type EditMode = 'shape' | 'walls'
+type EditMode = 'shape' | 'walls' | 'objects'
 
 /**
  * Defines a puzzle's shape and its room walls. Edits apply live to the library —
@@ -16,13 +20,24 @@ type EditMode = 'shape' | 'walls'
  * mode toggles thick borders on the edges between cells to fence off rooms.
  */
 export function PuzzleEditor({ puzzleId, onDone }: PuzzleEditorProps): JSX.Element {
-  const { library, updatePuzzle, setCellExists, setRectangle, clearShape, setWall, clearWalls } =
-    useLibrary()
+  const {
+    library,
+    updatePuzzle,
+    setCellExists,
+    setRectangle,
+    clearShape,
+    setWall,
+    clearWalls,
+    setObject,
+    setWindow,
+    clearObjects,
+  } = useLibrary()
   const puzzle = library.puzzles[puzzleId]
 
   const [mode, setMode] = useState<EditMode>('shape')
   const [rectW, setRectW] = useState(4)
   const [rectH, setRectH] = useState(4)
+  const [tool, setTool] = useState<ObjectTool>('chair')
 
   if (!puzzle) {
     return (
@@ -35,6 +50,8 @@ export function PuzzleEditor({ puzzleId, onDone }: PuzzleEditorProps): JSX.Eleme
 
   const cellCount = Object.keys(puzzle.cells).length
   const wallCount = Object.keys(puzzle.walls).length
+  const objectCount = Object.keys(puzzle.objects).length
+  const windowCount = Object.keys(puzzle.windows).length
 
   return (
     <div className="view editor">
@@ -76,9 +93,18 @@ export function PuzzleEditor({ puzzleId, onDone }: PuzzleEditorProps): JSX.Eleme
         >
           Walls
         </button>
+        <button
+          type="button"
+          role="tab"
+          aria-selected={mode === 'objects'}
+          className={`seg${mode === 'objects' ? ' active' : ''}`}
+          onClick={() => setMode('objects')}
+        >
+          Objects
+        </button>
       </div>
 
-      {mode === 'shape' ? (
+      {mode === 'shape' && (
         <>
           <div className="toolbar">
             <span className="toolbar-label">Fill rectangle</span>
@@ -128,7 +154,9 @@ export function PuzzleEditor({ puzzleId, onDone }: PuzzleEditorProps): JSX.Eleme
             />
           </div>
         </>
-      ) : (
+      )}
+
+      {mode === 'walls' && (
         <>
           <div className="toolbar">
             <span className="toolbar-label">Room walls</span>
@@ -159,6 +187,89 @@ export function PuzzleEditor({ puzzleId, onDone }: PuzzleEditorProps): JSX.Eleme
             </div>
           ) : (
             <p className="empty-state">Add some cells in Shape mode first, then come back to wall them off.</p>
+          )}
+        </>
+      )}
+
+      {mode === 'objects' && (
+        <>
+          <div className="toolbar">
+            <span className="toolbar-label">Objects</span>
+            <button
+              type="button"
+              className="btn btn-small btn-ghost"
+              disabled={objectCount + windowCount === 0}
+              onClick={() => {
+                if (
+                  objectCount + windowCount === 0 ||
+                  confirm('Remove every object and window from this puzzle?')
+                )
+                  clearObjects(puzzleId)
+              }}
+            >
+              Clear
+            </button>
+            <span className="toolbar-count">
+              {objectCount} object{objectCount === 1 ? '' : 's'} · {windowCount} window
+              {windowCount === 1 ? '' : 's'}
+            </span>
+          </div>
+
+          {cellCount > 0 ? (
+            <>
+              <div className="palette" role="toolbar" aria-label="Object palette">
+                {CELL_OBJECT_KINDS.map((kind) => (
+                  <button
+                    key={kind}
+                    type="button"
+                    className={`ptool${tool === kind ? ' active' : ''}`}
+                    aria-pressed={tool === kind}
+                    onClick={() => setTool(kind)}
+                  >
+                    <img className="ptool-icon" src={baseIconUrl(kind)} alt="" aria-hidden="true" />
+                    <span className="ptool-label">{OBJECT_LABEL[kind]}</span>
+                  </button>
+                ))}
+                <span className="palette-sep" aria-hidden="true" />
+                <button
+                  type="button"
+                  className={`ptool${tool === 'window' ? ' active' : ''}`}
+                  aria-pressed={tool === 'window'}
+                  onClick={() => setTool('window')}
+                >
+                  <img className="ptool-icon" src={baseIconUrl('window')} alt="" aria-hidden="true" />
+                  <span className="ptool-label">{OBJECT_LABEL.window}</span>
+                </button>
+                <button
+                  type="button"
+                  className={`ptool ptool-erase${tool === 'erase' ? ' active' : ''}`}
+                  aria-pressed={tool === 'erase'}
+                  onClick={() => setTool('erase')}
+                >
+                  <span className="ptool-glyph" aria-hidden="true">
+                    ⌫
+                  </span>
+                  <span className="ptool-label">Erase</span>
+                </button>
+              </div>
+
+              <p className="hint">
+                {tool === 'window'
+                  ? 'Click a wall — an interior wall or the outer edge — to add a window; click it again to remove it. Windows can only sit on walls.'
+                  : 'Pick an object, then click or drag across squares to place it. Only one object fits per square; click a matching square again to clear it.'}
+              </p>
+
+              <div className="board-scroll">
+                <ObjectsBoard
+                  puzzle={puzzle}
+                  tool={tool}
+                  onSetObject={(x, y, kind) => setObject(puzzleId, x, y, kind)}
+                  onSetWindow={(key, on) => setWindow(puzzleId, key, on)}
+                />
+              </div>
+            </>
+          ) : (
+            <p className="empty-state">Add some cells in Shape mode first, then come back to furnish them.</p>
           )}
         </>
       )}

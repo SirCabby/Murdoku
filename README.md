@@ -38,7 +38,7 @@ npm run typecheck  # tsc --noEmit only
 
 ## Saving your library
 
-Your whole library (folders → puzzles → cells → walls) is one JSON blob. It
+Your whole library (folders → puzzles → cells → walls → objects) is one JSON blob. It
 autosaves to the browser's `localStorage` on every edit, so nothing is lost on a
 refresh. But `localStorage` is tied to one browser on one origin — puzzles made
 on the dev server won't appear in the built site, and clearing site data wipes

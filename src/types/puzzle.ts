@@ -18,6 +18,25 @@ export interface CellState {
   note: string
 }
 
+/**
+ * Every furnishing that can be placed in a puzzle. All but one sit *inside* a
+ * square; a `window` is special — it lives on a wall (an edge between squares,
+ * or the outer perimeter), never inside a square.
+ */
+export type ObjectKind =
+  | 'chair'
+  | 'carpet'
+  | 'bed'
+  | 'window'
+  | 'table'
+  | 'tv'
+  | 'plant'
+  | 'shelf'
+  | 'box'
+
+/** The kinds that occupy a square — every object except the wall-bound window. */
+export type CellObjectKind = Exclude<ObjectKind, 'window'>
+
 export interface Puzzle {
   id: string
   name: string
@@ -33,6 +52,18 @@ export interface Puzzle {
    * are ever stored — removing a cell prunes any wall touching it.
    */
   walls: Record<string, true>
+  /**
+   * Furnishings placed inside squares — at most one per square. Keyed by `"x,y"`
+   * (always an existing cell); removing a cell prunes its object.
+   */
+  objects: Record<string, CellObjectKind>
+  /**
+   * Windows, which sit on walls rather than in squares. Keyed by an edge string
+   * in the walls key format (`lib/walls.ts`). An edge qualifies as a window
+   * mount when it is a perimeter edge (one cell exists) or an interior edge that
+   * carries a wall; a window is pruned once its edge stops qualifying.
+   */
+  windows: Record<string, true>
   createdAt: number
   updatedAt: number
 }
@@ -46,7 +77,7 @@ export interface Folder {
 
 /** The entire persisted library — one blob in localStorage / a save file. */
 export interface Library {
-  version: 3
+  version: 4
   folders: Folder[]
   puzzles: Record<string, Puzzle>
 }

@@ -7,7 +7,7 @@ import {
   useState,
 } from 'react'
 import type { ReactNode } from 'react'
-import type { Folder, Library, Puzzle } from '../types/puzzle'
+import type { CellObjectKind, Folder, Library, Puzzle } from '../types/puzzle'
 import { loadLibrary, saveLibrary } from '../lib/storage'
 import {
   clearMarks as clearMarksOp,
@@ -18,6 +18,12 @@ import {
   setRectangle,
 } from '../lib/board'
 import { pruneWalls, setWall as setWallOp } from '../lib/walls'
+import {
+  pruneObjects,
+  pruneWindows,
+  setObject as setObjectOp,
+  setWindow as setWindowOp,
+} from '../lib/objects'
 import { cellKey } from '../lib/coords'
 import { newId } from '../lib/id'
 import { useFileSync } from './useFileSync'
@@ -47,6 +53,10 @@ export interface LibraryApi {
   // Walls (room boundaries)
   setWall: (puzzleId: string, key: string, on: boolean) => void
   clearWalls: (puzzleId: string) => void
+  // Objects (furnishings)
+  setObject: (puzzleId: string, x: number, y: number, kind: CellObjectKind | null) => void
+  setWindow: (puzzleId: string, key: string, on: boolean) => void
+  clearObjects: (puzzleId: string) => void
   // Play
   cycleCell: (puzzleId: string, x: number, y: number) => void
   noteCell: (puzzleId: string, x: number, y: number, note: string) => void
@@ -119,6 +129,8 @@ export function LibraryProvider({ children }: { children: ReactNode }): JSX.Elem
           name: name.trim() || 'Untitled puzzle',
           cells: {},
           walls: {},
+          objects: {},
+          windows: {},
           createdAt: now(),
           updatedAt: now(),
         }
@@ -157,31 +169,71 @@ export function LibraryProvider({ children }: { children: ReactNode }): JSX.Elem
           if (cells === p.cells) return p
           // Removing a cell can orphan walls; adding one never does.
           const walls = exists ? p.walls : pruneWalls(p.walls, cells)
-          return { ...p, cells, walls }
+          // Either add or remove can invalidate furnishings: removing takes a
+          // cell's object with it, and either edit reshapes which edges qualify
+          // as window mounts.
+          const objects = pruneObjects(p.objects, cells)
+          const windows = pruneWindows(p.windows, cells, walls)
+          return { ...p, cells, walls, objects, windows }
         })
       },
 
       setRectangle(puzzleId, width, height) {
         patchPuzzle(puzzleId, (p) => {
           const cells = setRectangle(p.cells, width, height)
-          return { ...p, cells, walls: pruneWalls(p.walls, cells) }
+          const walls = pruneWalls(p.walls, cells)
+          return {
+            ...p,
+            cells,
+            walls,
+            objects: pruneObjects(p.objects, cells),
+            windows: pruneWindows(p.windows, cells, walls),
+          }
         })
       },
 
       clearShape(puzzleId) {
-        patchPuzzle(puzzleId, (p) => ({ ...p, cells: {}, walls: {} }))
+        patchPuzzle(puzzleId, (p) => ({ ...p, cells: {}, walls: {}, objects: {}, windows: {} }))
       },
 
       setWall(puzzleId, key, on) {
         patchPuzzle(puzzleId, (p) => {
           const walls = setWallOp(p.walls, key, on)
-          return walls === p.walls ? p : { ...p, walls }
+          if (walls === p.walls) return p
+          // Removing a wall can strip an interior edge's window.
+          return { ...p, walls, windows: pruneWindows(p.windows, p.cells, walls) }
         })
       },
 
       clearWalls(puzzleId) {
         patchPuzzle(puzzleId, (p) =>
-          Object.keys(p.walls).length === 0 ? p : { ...p, walls: {} }
+          Object.keys(p.walls).length === 0
+            ? p
+            : { ...p, walls: {}, windows: pruneWindows(p.windows, p.cells, {}) }
+        )
+      },
+
+      setObject(puzzleId, x, y, kind) {
+        patchPuzzle(puzzleId, (p) => {
+          const key = cellKey(x, y)
+          if (!(key in p.cells)) return p
+          const objects = setObjectOp(p.objects, key, kind)
+          return objects === p.objects ? p : { ...p, objects }
+        })
+      },
+
+      setWindow(puzzleId, key, on) {
+        patchPuzzle(puzzleId, (p) => {
+          const windows = setWindowOp(p.windows, key, on)
+          return windows === p.windows ? p : { ...p, windows }
+        })
+      },
+
+      clearObjects(puzzleId) {
+        patchPuzzle(puzzleId, (p) =>
+          Object.keys(p.objects).length === 0 && Object.keys(p.windows).length === 0
+            ? p
+            : { ...p, objects: {}, windows: {} }
         )
       },
 
