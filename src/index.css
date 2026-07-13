@@ -200,7 +200,6 @@ body {
 }
 .puzzle-card-main:hover { background: var(--panel-2); }
 .puzzle-card-name { font-weight: 600; }
-.puzzle-card-meta { font-size: 12px; color: var(--muted); }
 .puzzle-card-actions { display: flex; flex-direction: column; justify-content: center; padding: 6px; gap: 4px; border-left: 1px solid var(--line); }
 
 /* ---- Editor toolbar ---- */
