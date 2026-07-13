@@ -1,7 +1,12 @@
 import { useEffect, useRef, useState } from 'react'
 import { useLibrary } from '../state/LibraryContext'
 import { personaLabel } from '../lib/personas'
-import { loadShowSummaries, saveShowSummaries } from '../lib/prefs'
+import {
+  loadAutoCleanup,
+  loadShowSummaries,
+  saveAutoCleanup,
+  saveShowSummaries,
+} from '../lib/prefs'
 import { PlayerBoard } from './PlayerBoard'
 import { PersonaList } from './PersonaList'
 import type { PlaceMode } from './PersonaList'
@@ -29,6 +34,15 @@ export function PuzzlePlayer({ puzzleId, onBack, onEdit }: PuzzlePlayerProps): J
     const next = !summaries
     setSummaries(next)
     saveShowSummaries(next)
+  }
+  // "Clean up" behaviour when committing an answer. Manual (off) leaves the board
+  // as-is; Automatic (on) crosses out the rest of the answered cell's row and
+  // column and drops that persona's guesses elsewhere. A view preference like the
+  // summaries switch, stored under its own localStorage key.
+  const [autoCleanup, setAutoCleanup] = useState(loadAutoCleanup)
+  function changeCleanup(on: boolean): void {
+    setAutoCleanup(on)
+    saveAutoCleanup(on)
   }
   // Holding Shift temporarily flips guess↔answer, so you can drop the opposite of
   // the picked mode without touching the dropdown.
@@ -126,6 +140,17 @@ export function PuzzlePlayer({ puzzleId, onBack, onEdit }: PuzzlePlayerProps): J
           <h1 className="view-title">{puzzle.name}</h1>
         </div>
         <div className="view-head-actions">
+          <label className="cleanup-toggle">
+            <span className="cleanup-toggle-label">Clean up:</span>
+            <select
+              className="cleanup-toggle-select"
+              value={autoCleanup ? 'automatic' : 'manual'}
+              onChange={(e) => changeCleanup(e.target.value === 'automatic')}
+            >
+              <option value="manual">Manual</option>
+              <option value="automatic">Automatic</option>
+            </select>
+          </label>
           <button
             type="button"
             className={`btn${summaries ? ' is-active' : ''}`}
@@ -159,7 +184,7 @@ export function PuzzlePlayer({ puzzleId, onBack, onEdit }: PuzzlePlayerProps): J
                   ? (x, y) => {
                       if (crossActive) toggleCross(puzzleId, x, y)
                       else if (activePersona) {
-                        if (effectiveMode === 'answer') setAnswer(puzzleId, x, y, activePersona.id)
+                        if (effectiveMode === 'answer') setAnswer(puzzleId, x, y, activePersona.id, autoCleanup)
                         else toggleGuess(puzzleId, x, y, activePersona.id)
                       }
                     }

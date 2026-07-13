@@ -129,6 +129,18 @@ body {
 .btn:disabled { opacity: 0.5; cursor: default; }
 .btn:disabled:hover { border-color: var(--line); }
 
+/* "Clean up" mode selector in the play-view header: Manual (the plain behaviour)
+   vs Automatic (committing an answer crosses out the rest of its row/column and
+   drops that persona's guesses elsewhere). Sized to sit beside the .btn chips. */
+.cleanup-toggle { display: inline-flex; align-items: center; gap: 6px; }
+.cleanup-toggle-label { font-size: 13px; color: var(--muted); }
+.cleanup-toggle-select {
+  background: var(--panel-2); color: var(--text);
+  border: 1px solid var(--line); border-radius: 8px;
+  padding: 8px 10px; font: inherit; font-size: 14px; cursor: pointer;
+}
+.cleanup-toggle-select:hover { border-color: var(--line-strong); }
+
 /* ---- Segmented control (edit-mode switch) ---- */
 .segmented {
   display: inline-flex; gap: 2px; margin-bottom: 14px;

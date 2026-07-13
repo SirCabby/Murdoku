@@ -1,5 +1,7 @@
-import type { CellState } from '../types/puzzle'
-import { cellKey } from './coords'
+import type { CellObjectKind, CellState } from '../types/puzzle'
+import { cellKey, parseCellKey } from './coords'
+import { isPlacementBlocked } from './objects'
+import { pruneGuessPersona } from './guesses'
 
 // Pure operations on a puzzle's `answers` map — the player's per-cell definitive
 // placement (which single persona they've committed to occupies each square).
@@ -64,6 +66,56 @@ export function pruneAnswers(
     else changed = true
   }
   return changed ? next : answers
+}
+
+/** The three placement maps the automatic clean-up rewrites in one pass. */
+export interface AnswerCleanup {
+  answers: Record<string, string>
+  guesses: Record<string, string[]>
+  crosses: Record<string, true>
+}
+
+/**
+ * The "automatic" clean-up that follows committing an answer at (x, y). Pinning
+ * `personaId` to that one cell has two consequences the player would otherwise
+ * mark by hand:
+ *   1. Every other *placeable* cell sharing its row or column is a room the
+ *      occupant can't also be in, so it's crossed out — and whatever guess or
+ *      answer sat there gives way, exactly as a hand-placed X does.
+ *   2. The persona is now fixed here, so its id is stripped from every other
+ *      cell's guesses (cells off this row/column keep their remaining guesses).
+ * Cells that can't hold a placement at all (a table etc. — `isPlacementBlocked`)
+ * are left untouched, matching how they refuse a manual X. Pure: pass the maps
+ * in *after* the answer itself is set, and replace all three with the result.
+ */
+export function cleanupAfterAnswer(
+  x: number,
+  y: number,
+  personaId: string,
+  cells: Record<string, CellState>,
+  objects: Record<string, CellObjectKind>,
+  answers: Record<string, string>,
+  guesses: Record<string, string[]>,
+  crosses: Record<string, true>
+): AnswerCleanup {
+  const placed = cellKey(x, y)
+  const nextCrosses = { ...crosses }
+  const nextAnswers = { ...answers }
+  const clearedGuesses = { ...guesses }
+  for (const key of Object.keys(cells)) {
+    if (key === placed) continue
+    const { x: cx, y: cy } = parseCellKey(key)
+    if (cx !== x && cy !== y) continue // not in this cell's row or column
+    if (isPlacementBlocked(objects, key)) continue
+    nextCrosses[key] = true
+    delete nextAnswers[key]
+    delete clearedGuesses[key]
+  }
+  return {
+    answers: nextAnswers,
+    guesses: pruneGuessPersona(clearedGuesses, personaId),
+    crosses: nextCrosses,
+  }
 }
 
 /** Clear any answer naming a removed persona (its cells become unanswered). */

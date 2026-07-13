@@ -31,6 +31,7 @@ import {
   toggleGuess as toggleGuessOp,
 } from '../lib/guesses'
 import {
+  cleanupAfterAnswer,
   clearAnswerAt,
   pruneAnswerPersona,
   pruneAnswers,
@@ -91,8 +92,16 @@ export interface LibraryApi {
   // Guesses (per-cell tentative persona placements at play)
   toggleGuess: (puzzleId: string, x: number, y: number, personaId: string) => void
   clearGuesses: (puzzleId: string) => void
-  // Answers (per-cell definitive persona placement at play)
-  setAnswer: (puzzleId: string, x: number, y: number, personaId: string) => void
+  // Answers (per-cell definitive persona placement at play). With `autoCleanup`
+  // on, committing an answer also crosses out the rest of its row and column and
+  // drops the persona's guesses elsewhere (see `cleanupAfterAnswer`).
+  setAnswer: (
+    puzzleId: string,
+    x: number,
+    y: number,
+    personaId: string,
+    autoCleanup: boolean
+  ) => void
   clearAnswers: (puzzleId: string) => void
   // Crosses (per-cell "ruled out" X at play)
   toggleCross: (puzzleId: string, x: number, y: number) => void
@@ -407,17 +416,34 @@ export function LibraryProvider({ children }: { children: ReactNode }): JSX.Elem
         )
       },
 
-      setAnswer(puzzleId, x, y, personaId) {
+      setAnswer(puzzleId, x, y, personaId, autoCleanup) {
         patchPuzzle(puzzleId, (p) => {
           // Only answer on real cells, and only with personas still in the cast.
           if (!(cellKey(x, y) in p.cells)) return p
           if (!p.personas.some((per) => per.id === personaId)) return p
+          // Clicking the persona already answered here toggles it back off — a
+          // removal, so the automatic clean-up (which follows *committing* an
+          // answer) sits this one out.
+          const toggledOff = p.answers[cellKey(x, y)] === personaId
           const answers = setAnswerOp(p.answers, x, y, personaId)
           if (answers === p.answers) return p
           // Committing an answer supersedes any tentative guesses or X in that cell.
           const guesses = clearGuessesAt(p.guesses, x, y)
           const crosses = clearCrossAt(p.crosses, x, y)
-          return { ...p, answers, guesses, crosses }
+          if (!autoCleanup || toggledOff) return { ...p, answers, guesses, crosses }
+          // Automatic clean-up: cross out the rest of this row and column and
+          // drop the just-placed persona's guesses from every other cell.
+          const cleaned = cleanupAfterAnswer(
+            x,
+            y,
+            personaId,
+            p.cells,
+            p.objects,
+            answers,
+            guesses,
+            crosses
+          )
+          return { ...p, answers: cleaned.answers, guesses: cleaned.guesses, crosses: cleaned.crosses }
         })
       },
 
