@@ -10,10 +10,11 @@ import { newId } from './id'
 // will additionally sync this blob to the connected save file (see lib/gst.ts);
 // that hook is intentionally not wired up yet.
 
-const STORAGE_KEY = 'murdoku.library.v11'
+const STORAGE_KEY = 'murdoku.library.v12'
 // Older blobs still sitting in some users' storage, newest first. Each is
 // upgraded forward by `coerceLibrary` and then removed once read.
 const LEGACY_KEYS = [
+  'murdoku.library.v11',
   'murdoku.library.v10',
   'murdoku.library.v9',
   'murdoku.library.v8',
@@ -26,7 +27,7 @@ const LEGACY_KEYS = [
 ]
 
 export function emptyLibrary(): Library {
-  return { version: 11, folders: [], puzzles: {} }
+  return { version: 12, folders: [], puzzles: {} }
 }
 
 export function loadLibrary(): Library {
@@ -70,28 +71,29 @@ export function parseLibrary(text: string): Library {
 
 /**
  * Validate an already-parsed value and normalize it to the current Library
- * shape, or return null if it isn't one. Accepts the current version (11) and
+ * shape, or return null if it isn't one. Accepts the current version (12) and
  * upgrades older blobs forward one step at a time: v2 (no walls) → v3 (no
  * objects) → v4 (no room labels) → v5 (labels mid-cell) → v6 (labels snapped to
  * bottom walls) → v7 (no personas) → v8 (no persona guesses) → v9 (no persona
- * answers) → v10 (no crossed-out cells) → v11 (no murderer accusation).
- * Validation is shallow — the same trust level the app has always applied to its
- * own localStorage blob.
+ * answers) → v10 (no crossed-out cells) → v11 (no murderer accusation) → v12 (no
+ * answer key). Validation is shallow — the same trust level the app has always
+ * applied to its own localStorage blob.
  */
 function coerceLibrary(value: unknown): Library | null {
   if (!value || typeof value !== 'object') return null
   const v = value as { version?: unknown; folders?: unknown }
   if (!Array.isArray(v.folders)) return null
-  if (v.version === 11) return value as Library
-  if (v.version === 10) return upgradeV10(value as LibraryV10)
-  if (v.version === 9) return upgradeV10(upgradeV9(value as LibraryV9))
-  if (v.version === 8) return upgradeV10(upgradeV9(upgradeV8(value as LibraryV8)))
-  if (v.version === 7) return upgradeV10(upgradeV9(upgradeV8(upgradeV7(value as LibraryV7))))
-  if (v.version === 6) return upgradeV10(upgradeV9(upgradeV8(upgradeV7(upgradeV6(value as LibraryV6)))))
-  if (v.version === 5) return upgradeV10(upgradeV9(upgradeV8(upgradeV7(upgradeV6(upgradeV5(value as LibraryV5))))))
-  if (v.version === 4) return upgradeV10(upgradeV9(upgradeV8(upgradeV7(upgradeV6(upgradeV5(upgradeV4(value as LibraryV4)))))))
-  if (v.version === 3) return upgradeV10(upgradeV9(upgradeV8(upgradeV7(upgradeV6(upgradeV5(upgradeV4(upgradeV3(value as LibraryV3))))))))
-  if (v.version === 2) return upgradeV10(upgradeV9(upgradeV8(upgradeV7(upgradeV6(upgradeV5(upgradeV4(upgradeV3(upgradeV2(value as LibraryV2)))))))))
+  if (v.version === 12) return value as Library
+  if (v.version === 11) return upgradeV11(value as LibraryV11)
+  if (v.version === 10) return upgradeV11(upgradeV10(value as LibraryV10))
+  if (v.version === 9) return upgradeV11(upgradeV10(upgradeV9(value as LibraryV9)))
+  if (v.version === 8) return upgradeV11(upgradeV10(upgradeV9(upgradeV8(value as LibraryV8))))
+  if (v.version === 7) return upgradeV11(upgradeV10(upgradeV9(upgradeV8(upgradeV7(value as LibraryV7)))))
+  if (v.version === 6) return upgradeV11(upgradeV10(upgradeV9(upgradeV8(upgradeV7(upgradeV6(value as LibraryV6))))))
+  if (v.version === 5) return upgradeV11(upgradeV10(upgradeV9(upgradeV8(upgradeV7(upgradeV6(upgradeV5(value as LibraryV5)))))))
+  if (v.version === 4) return upgradeV11(upgradeV10(upgradeV9(upgradeV8(upgradeV7(upgradeV6(upgradeV5(upgradeV4(value as LibraryV4))))))))
+  if (v.version === 3) return upgradeV11(upgradeV10(upgradeV9(upgradeV8(upgradeV7(upgradeV6(upgradeV5(upgradeV4(upgradeV3(value as LibraryV3)))))))))
+  if (v.version === 2) return upgradeV11(upgradeV10(upgradeV9(upgradeV8(upgradeV7(upgradeV6(upgradeV5(upgradeV4(upgradeV3(upgradeV2(value as LibraryV2))))))))))
   return null
 }
 
@@ -196,12 +198,25 @@ function upgradeV9(old: LibraryV9): LibraryV10 {
  * accusation is play state the author never sets, so every migrated puzzle starts
  * undecided.
  */
-function upgradeV10(old: LibraryV10): Library {
-  const puzzles: Record<string, Puzzle> = {}
+function upgradeV10(old: LibraryV10): LibraryV11 {
+  const puzzles: Record<string, PuzzleV11> = {}
   for (const [id, p] of Object.entries(old.puzzles)) {
     puzzles[id] = { ...p, murderer: null }
   }
   return { version: 11, folders: old.folders, puzzles }
+}
+
+/**
+ * Add an empty `solution` answer key to every puzzle, taking v11 to v12. The key
+ * is authoring content that predates this version, so every migrated puzzle starts
+ * with none — the author fills it in from the editor's Answer key tab.
+ */
+function upgradeV11(old: LibraryV11): Library {
+  const puzzles: Record<string, Puzzle> = {}
+  for (const [id, p] of Object.entries(old.puzzles)) {
+    puzzles[id] = { ...p, solution: {} }
+  }
+  return { version: 12, folders: old.folders, puzzles }
 }
 
 /** A pre-walls (version 2) puzzle, as it still sits in some users' storage. */
@@ -307,6 +322,17 @@ interface LibraryV10 {
   version: 10
   folders: Folder[]
   puzzles: Record<string, PuzzleV10>
+}
+
+/** A version-11 puzzle — has a murderer accusation but no answer key yet. */
+interface PuzzleV11 extends PuzzleV10 {
+  murderer: string | null
+}
+
+interface LibraryV11 {
+  version: 11
+  folders: Folder[]
+  puzzles: Record<string, PuzzleV11>
 }
 
 export function saveLibrary(library: Library): void {
@@ -416,11 +442,20 @@ function seedLibrary(): Library {
   // Colonel Mustard (the one already committed as an answer above).
   const murderer = mustard.id
 
+  // The author's answer key: each of the three cast members in a distinct room,
+  // no two sharing a row or column, on placeable (non-blocking) cells. Every other
+  // placeable cell is X'd automatically in the Answer key tab.
+  const solution: Record<string, string> = {
+    [cellKey(3, 0)]: scarlet.id,
+    [cellKey(0, 1)]: mustard.id,
+    [cellKey(2, 2)]: boddy.id,
+  }
+
   const puzzleId = newId()
   const folderId = newId()
 
   return {
-    version: 11,
+    version: 12,
     folders: [{ id: folderId, name: 'My Cases', puzzleIds: [puzzleId] }],
     puzzles: {
       [puzzleId]: {
@@ -436,6 +471,7 @@ function seedLibrary(): Library {
         answers,
         crosses,
         murderer,
+        solution,
         createdAt: 0,
         updatedAt: 0,
       },

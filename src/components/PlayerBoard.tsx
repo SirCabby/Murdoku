@@ -29,6 +29,15 @@ interface PlayerBoardProps {
    * stand out. Omit / null for no highlight.
    */
   highlightId?: string | null | undefined
+  /**
+   * Which per-cell placement maps to draw. Each defaults to the puzzle's own play
+   * state; passing overrides lets the same renderer show a different layer — the
+   * editor's Answer key tab draws `puzzle.solution` as the answers, no guesses, and
+   * a derived cross on every other placeable cell (see `lib/solution.ts`).
+   */
+  answers?: Record<string, string> | undefined
+  guesses?: Record<string, string[]> | undefined
+  crosses?: Record<string, true> | undefined
   /** Place the active tool in a cell (guess, answer, or X, per the player's mode). Omit for read-only. */
   onPlace?: ((x: number, y: number) => void) | undefined
 }
@@ -53,8 +62,17 @@ export function PlayerBoard({
   active,
   summaries,
   highlightId,
+  answers: answersProp,
+  guesses: guessesProp,
+  crosses: crossesProp,
   onPlace,
 }: PlayerBoardProps): JSX.Element | null {
+  // Which layer to draw: the puzzle's own play state unless the caller overrides
+  // it (the editor's Answer key tab points these at the solution instead).
+  const answers = answersProp ?? puzzle.answers
+  const guesses = guessesProp ?? puzzle.guesses
+  const crosses = crossesProp ?? puzzle.crosses
+
   const keys = Object.keys(puzzle.cells)
   const bounds = boundsOf(keys)
   if (!bounds) return null
@@ -92,7 +110,7 @@ export function PlayerBoard({
   }
 
   function chipsFor(key: string): GuessChip[] {
-    const ids = puzzle.guesses[key] ?? []
+    const ids = guesses[key] ?? []
     return ids
       .map((id) => chipFor(id))
       .filter((c): c is GuessChip => Boolean(c))
@@ -101,7 +119,7 @@ export function PlayerBoard({
 
   // The one committed answer for a cell, drawn as a big letter (null if none).
   function answerFor(key: string): GuessChip | null {
-    const id = puzzle.answers[key]
+    const id = answers[key]
     return id ? chipFor(id) : null
   }
 
@@ -111,9 +129,9 @@ export function PlayerBoard({
   function laneSummary(laneKeys: string[]): SummaryChip[] {
     const answered = new Map<string, boolean>() // id → committed as an answer somewhere in the lane
     for (const key of laneKeys) {
-      const ans = puzzle.answers[key]
+      const ans = answers[key]
       if (ans) answered.set(ans, true)
-      for (const id of puzzle.guesses[key] ?? []) if (!answered.has(id)) answered.set(id, false)
+      for (const id of guesses[key] ?? []) if (!answered.has(id)) answered.set(id, false)
     }
     return [...answered.entries()]
       .map(([id, isAnswer]) => {
@@ -157,7 +175,7 @@ export function PlayerBoard({
               state={state}
               guesses={chipsFor(key)}
               answer={answerFor(key)}
-              cross={puzzle.crosses[key] === true}
+              cross={crosses[key] === true}
               highlightId={highlightId}
               onPlace={placing && !blocked && onPlace ? () => onPlace(x, y) : undefined}
             />

@@ -146,6 +146,20 @@ export interface Puzzle {
    */
   crosses: Record<string, true>
   /**
+   * The author's answer key: the definitive placement of the cast, one persona
+   * per cell. Keyed by `"x,y"` (always an existing, placeable cell) to a single
+   * persona id — the same shape as `answers`, but *authoring* content rather than
+   * play state. Its invariants are stricter than the player's board: each persona
+   * appears at most once across the whole key, and at most one persona sits in any
+   * row or column (see `lib/solution.ts`). Every other placeable cell — one with
+   * no persona and no blocking object — is implicitly ruled out (a big "X" derived
+   * at render, never stored). The victim is placed here too. Kept apart from the
+   * player's `answers`/`crosses` so revealing or checking the solution never
+   * disturbs a solve in progress. Removing a cell drops its entry, and removing a
+   * persona clears any placement naming it.
+   */
+  solution: Record<string, string>
+  /**
    * The player's final accusation: the id of the suspect they've concluded is
    * the murderer, or `null` while undecided. Always a *suspect* — the victim is
    * never a valid choice — and only one at a time. Unlike the per-cell play maps
@@ -167,7 +181,7 @@ export interface Folder {
 
 /** The entire persisted library — one blob in localStorage / a save file. */
 export interface Library {
-  version: 11
+  version: 12
   folders: Folder[]
   puzzles: Record<string, Puzzle>
 }

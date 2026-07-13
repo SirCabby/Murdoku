@@ -8,13 +8,14 @@ import { ObjectsBoard } from './ObjectsBoard'
 import type { ObjectTool } from './ObjectsBoard'
 import { RoomsBoard } from './RoomsBoard'
 import { PersonasEditor } from './PersonasEditor'
+import { SolutionEditor } from './SolutionEditor'
 
 interface PuzzleEditorProps {
   puzzleId: string
   onDone: () => void
 }
 
-type EditMode = 'shape' | 'walls' | 'objects' | 'rooms' | 'people'
+type EditMode = 'shape' | 'walls' | 'objects' | 'rooms' | 'people' | 'solution'
 
 /**
  * Defines a puzzle's shape and its room walls. Edits apply live to the library —
@@ -42,6 +43,8 @@ export function PuzzleEditor({ puzzleId, onDone }: PuzzleEditorProps): JSX.Eleme
     setPersonaName,
     setPersonaDescription,
     removePersona,
+    setSolution,
+    clearSolution,
   } = useLibrary()
   const puzzle = library.puzzles[puzzleId]
 
@@ -64,6 +67,8 @@ export function PuzzleEditor({ puzzleId, onDone }: PuzzleEditorProps): JSX.Eleme
   const objectCount = Object.keys(puzzle.objects).length
   const windowCount = Object.keys(puzzle.windows).length
   const labelCount = puzzle.labels.length
+  const solutionCount = Object.keys(puzzle.solution).length
+  const personaCount = puzzle.personas.length
 
   return (
     <div className="view editor">
@@ -131,6 +136,15 @@ export function PuzzleEditor({ puzzleId, onDone }: PuzzleEditorProps): JSX.Eleme
           onClick={() => setMode('people')}
         >
           People
+        </button>
+        <button
+          type="button"
+          role="tab"
+          aria-selected={mode === 'solution'}
+          className={`seg${mode === 'solution' ? ' active' : ''}`}
+          onClick={() => setMode('solution')}
+        >
+          Answer key
         </button>
       </div>
 
@@ -360,6 +374,45 @@ export function PuzzleEditor({ puzzleId, onDone }: PuzzleEditorProps): JSX.Eleme
             onSetDescription={(id, description) => setPersonaDescription(puzzleId, id, description)}
             onRemove={(id) => removePersona(puzzleId, id)}
           />
+        </>
+      )}
+
+      {mode === 'solution' && (
+        <>
+          <div className="toolbar">
+            <span className="toolbar-label">Answer key</span>
+            <button
+              type="button"
+              className="btn btn-small btn-ghost"
+              disabled={solutionCount === 0}
+              onClick={() => {
+                if (solutionCount === 0 || confirm('Clear the whole answer key for this puzzle?'))
+                  clearSolution(puzzleId)
+              }}
+            >
+              Clear
+            </button>
+            <span className="toolbar-count">
+              {solutionCount} of {personaCount} placed
+            </span>
+          </div>
+
+          {cellCount > 0 ? (
+            <>
+              <p className="hint">
+                Pick a person, then click the room they're in to build the solution. Each person goes
+                in exactly one room, and no two share a row or column — placing one clears anyone else
+                in that row or column. Every other room is X'd out automatically.
+              </p>
+
+              <SolutionEditor
+                puzzle={puzzle}
+                onPlace={(x, y, personaId) => setSolution(puzzleId, x, y, personaId)}
+              />
+            </>
+          ) : (
+            <p className="empty-state">Add some cells in Shape mode first, then come back to lay out the answer.</p>
+          )}
         </>
       )}
     </div>

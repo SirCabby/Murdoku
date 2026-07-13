@@ -19,6 +19,7 @@ import {
 } from '../lib/board'
 import { pruneWalls, setWall as setWallOp } from '../lib/walls'
 import {
+  isPlacementBlocked,
   pruneObjects,
   pruneWindows,
   setObject as setObjectOp,
@@ -42,6 +43,12 @@ import {
   pruneCrosses,
   toggleCross as toggleCrossOp,
 } from '../lib/crosses'
+import {
+  pruneSolution,
+  pruneSolutionBlocked,
+  pruneSolutionPersona,
+  setSolution as setSolutionOp,
+} from '../lib/solution'
 import { cellKey } from '../lib/coords'
 import { newId } from '../lib/id'
 import { useFileSync } from './useFileSync'
@@ -88,6 +95,11 @@ export interface LibraryApi {
   removePersona: (puzzleId: string, id: string) => void
   /** Set (or clear, with `null`) the player's final accusation — always a suspect. */
   setMurderer: (puzzleId: string, personaId: string | null) => void
+  // Answer key (the author's definitive per-cell placement of the cast). Placing
+  // keeps the key legal: one cell per persona, at most one per row and column (see
+  // `lib/solution.ts`); re-placing the same persona in its cell clears it.
+  setSolution: (puzzleId: string, x: number, y: number, personaId: string) => void
+  clearSolution: (puzzleId: string) => void
   // Play
   cycleCell: (puzzleId: string, x: number, y: number) => void
   clearMarks: (puzzleId: string) => void
@@ -187,6 +199,7 @@ export function LibraryProvider({ children }: { children: ReactNode }): JSX.Elem
           answers: {},
           crosses: {},
           murderer: null,
+          solution: {},
           createdAt: now(),
           updatedAt: now(),
         }
@@ -230,11 +243,13 @@ export function LibraryProvider({ children }: { children: ReactNode }): JSX.Elem
           // as window mounts.
           const objects = pruneObjects(p.objects, cells)
           const windows = pruneWindows(p.windows, cells, walls)
-          // Removing a cell also drops any guesses, answer, or X that sat there.
+          // Removing a cell also drops any guesses, answer, X, or answer-key
+          // placement that sat there.
           const guesses = pruneGuesses(p.guesses, cells)
           const answers = pruneAnswers(p.answers, cells)
           const crosses = pruneCrosses(p.crosses, cells)
-          return { ...p, cells, walls, objects, windows, guesses, answers, crosses }
+          const solution = pruneSolution(p.solution, cells)
+          return { ...p, cells, walls, objects, windows, guesses, answers, crosses, solution }
         })
       },
 
@@ -251,6 +266,7 @@ export function LibraryProvider({ children }: { children: ReactNode }): JSX.Elem
             guesses: pruneGuesses(p.guesses, cells),
             answers: pruneAnswers(p.answers, cells),
             crosses: pruneCrosses(p.crosses, cells),
+            solution: pruneSolution(p.solution, cells),
           }
         })
       },
@@ -265,10 +281,12 @@ export function LibraryProvider({ children }: { children: ReactNode }): JSX.Elem
           // Labels are anchored in lattice space, so an empty shape leaves them
           // floating over nothing — clear them out with the cells they named.
           labels: [],
-          // Guesses, answers, and crosses are keyed by cell too; none survive an emptied shape.
+          // Guesses, answers, crosses, and the answer key are keyed by cell too;
+          // none survive an emptied shape.
           guesses: {},
           answers: {},
           crosses: {},
+          solution: {},
         }))
       },
 
@@ -294,7 +312,11 @@ export function LibraryProvider({ children }: { children: ReactNode }): JSX.Elem
           const key = cellKey(x, y)
           if (!(key in p.cells)) return p
           const objects = setObjectOp(p.objects, key, kind)
-          return objects === p.objects ? p : { ...p, objects }
+          if (objects === p.objects) return p
+          // A placement-blocking object (a table etc.) can't share its cell with a
+          // cast member, so furnishing a solved cell drops that answer-key entry.
+          const solution = pruneSolutionBlocked(p.solution, objects)
+          return { ...p, objects, solution }
         })
       },
 
@@ -379,13 +401,15 @@ export function LibraryProvider({ children }: { children: ReactNode }): JSX.Elem
           // The victim is permanent, and at least one suspect must remain.
           if (!target || target.role === 'victim') return p
           if (suspectsOf(p.personas).length <= 1) return p
-          // Drop the removed suspect's letter from any cell it was guessed or
-          // answered in, and clear the accusation if it named this suspect.
+          // Drop the removed suspect's letter from any cell it was guessed,
+          // answered, or placed in the key, and clear the accusation if it named
+          // this suspect.
           return {
             ...p,
             personas: p.personas.filter((x) => x.id !== id),
             guesses: pruneGuessPersona(p.guesses, id),
             answers: pruneAnswerPersona(p.answers, id),
+            solution: pruneSolutionPersona(p.solution, id),
             murderer: p.murderer === id ? null : p.murderer,
           }
         })
@@ -400,6 +424,25 @@ export function LibraryProvider({ children }: { children: ReactNode }): JSX.Elem
           }
           return p.murderer === personaId ? p : { ...p, murderer: personaId }
         })
+      },
+
+      setSolution(puzzleId, x, y, personaId) {
+        patchPuzzle(puzzleId, (p) => {
+          // Only place on real, placeable cells, and only with a persona still in
+          // the cast — a table etc. can't hold anyone.
+          const key = cellKey(x, y)
+          if (!(key in p.cells)) return p
+          if (isPlacementBlocked(p.objects, key)) return p
+          if (!p.personas.some((per) => per.id === personaId)) return p
+          const solution = setSolutionOp(p.solution, x, y, personaId)
+          return solution === p.solution ? p : { ...p, solution }
+        })
+      },
+
+      clearSolution(puzzleId) {
+        patchPuzzle(puzzleId, (p) =>
+          Object.keys(p.solution).length === 0 ? p : { ...p, solution: {} }
+        )
       },
 
       cycleCell(puzzleId, x, y) {
