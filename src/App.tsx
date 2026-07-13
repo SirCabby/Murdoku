@@ -3,6 +3,7 @@ import { LibraryProvider } from './state/LibraryContext'
 import { HomeView } from './components/HomeView'
 import { PuzzlePlayer } from './components/PuzzlePlayer'
 import { PuzzleEditor } from './components/PuzzleEditor'
+import { FileBar } from './components/FileBar'
 import { getGstConnection } from './lib/gst'
 
 type View =
@@ -22,6 +23,8 @@ export function App(): JSX.Element {
           {gst.saveName ? ` — save: ${gst.saveName}` : ''}
         </div>
       )}
+
+      <FileBar />
 
       <div className="app">
         {view.name === 'home' && (

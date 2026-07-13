@@ -6,8 +6,9 @@ the boxes (✓ / ✗ / notes), and revise as you deduce — no eraser required.
 
 It runs two ways:
 
-- **Standalone** — open it on its own; your library is saved in the browser
-  (`localStorage`).
+- **Standalone** — open it on its own; your library autosaves in the browser
+  (`localStorage`), and you can also **save it to a file you choose** (see
+  [Saving your library](#saving-your-library)).
 - **Inside GameStateTracker** — served from `companion-sites/<id>/` and opened
   from a game's save. When launched that way it detects the connection (see
   [GameStateTracker integration](#gamestatetracker-integration)).
@@ -34,6 +35,29 @@ npm run typecheck  # tsc --noEmit only
    - **Right-click** a cell to attach a scratch note.
    - **Auto-✗ row & column** (on by default): confirming a pairing with ✓
      automatically rules out the rest of that pairing's row and column.
+
+## Saving your library
+
+Your whole library (folders → puzzles → cells → walls) is one JSON blob. It
+autosaves to the browser's `localStorage` on every edit, so nothing is lost on a
+refresh. But `localStorage` is tied to one browser on one origin — puzzles made
+on the dev server won't appear in the built site, and clearing site data wipes
+them. To keep a durable, portable copy you control, use the bar at the top:
+
+- **Save to file…** — pick a location and start auto-saving there. Every edit is
+  written back to that `.murdoku` file (it's plain JSON). The file you picked is
+  remembered across sessions; after a reload, click **Reconnect** once to let the
+  browser re-grant write access (a security requirement), then auto-saving
+  resumes.
+- **Open file…** — load a `.murdoku` file, replacing the current library, and
+  keep saving to it.
+
+Choosing a location needs the **File System Access API** (Chrome, Edge, and other
+Chromium browsers). On Firefox/Safari the bar falls back to **Download file** /
+**Import file…** instead.
+
+`.murdoku` files are your own puzzle data and are git-ignored — they're never
+committed even if you save one inside this repo.
 
 ## Architecture
 

@@ -20,12 +20,18 @@ import {
 import { pruneWalls, setWall as setWallOp } from '../lib/walls'
 import { cellKey } from '../lib/coords'
 import { newId } from '../lib/id'
+import { useFileSync } from './useFileSync'
+import type { FileSyncApi } from './useFileSync'
 
 // Central store for the whole library. Every mutation returns a new Library and
 // is persisted via the effect below. Immutable updates on a single useState.
 
 export interface LibraryApi {
   library: Library
+  /** Replace the whole library (used when importing/opening a save file). */
+  replaceLibrary: (next: Library) => void
+  /** Save-to-a-chosen-file layer (File System Access API + fallbacks). */
+  fileSync: FileSyncApi
   // Folders
   addFolder: (name: string) => Folder
   renameFolder: (folderId: string, name: string) => void
@@ -56,6 +62,12 @@ export function LibraryProvider({ children }: { children: ReactNode }): JSX.Elem
     saveLibrary(library)
   }, [library])
 
+  const replaceLibrary = useCallback((next: Library): void => {
+    setLibrary(next)
+  }, [])
+
+  const fileSync = useFileSync(library, replaceLibrary)
+
   // Update a single puzzle immutably and bump its timestamp.
   const patchPuzzle = useCallback(
     (puzzleId: string, update: (p: Puzzle) => Puzzle): void => {
@@ -72,9 +84,10 @@ export function LibraryProvider({ children }: { children: ReactNode }): JSX.Elem
     []
   )
 
-  const api = useMemo<LibraryApi>(() => {
+  const api = useMemo<Omit<LibraryApi, 'fileSync'>>(() => {
     return {
       library,
+      replaceLibrary,
 
       addFolder(name) {
         const folder: Folder = { id: newId(), name: name.trim() || 'Untitled folder', puzzleIds: [] }
@@ -188,9 +201,11 @@ export function LibraryProvider({ children }: { children: ReactNode }): JSX.Elem
         patchPuzzle(puzzleId, (p) => ({ ...p, cells: clearMarksOp(p.cells) }))
       },
     }
-  }, [library, patchPuzzle])
+  }, [library, patchPuzzle, replaceLibrary])
 
-  return <LibraryContext.Provider value={api}>{children}</LibraryContext.Provider>
+  const value = useMemo<LibraryApi>(() => ({ ...api, fileSync }), [api, fileSync])
+
+  return <LibraryContext.Provider value={value}>{children}</LibraryContext.Provider>
 }
 
 export function useLibrary(): LibraryApi {
