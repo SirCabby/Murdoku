@@ -1,0 +1,188 @@
+:root {
+  --cell: 34px;          /* grid cell size */
+  --lh: 140px;           /* left header width */
+  --col-label-h: 92px;   /* vertical column-label height */
+
+  --bg: #14161c;
+  --panel: #1c1f27;
+  --panel-2: #232733;
+  --text: #e7e9ee;
+  --muted: #98a0b3;
+  --line: #333a48;
+  --line-strong: #4a5468;
+  --accent: #6ea8fe;
+  --accent-ink: #0b1220;
+
+  --cell-bg: #191c24;
+  --cell-hover: #2a3040;
+  --yes-bg: #1f7a4d;
+  --yes-fg: #d8ffe9;
+  --no-fg: #ff7a7a;
+  --note: #e6b455;
+
+  color-scheme: dark;
+}
+
+@media (prefers-color-scheme: light) {
+  :root {
+    --bg: #f4f5f8;
+    --panel: #ffffff;
+    --panel-2: #eef1f6;
+    --text: #1b1f2a;
+    --muted: #5c6577;
+    --line: #d3d8e2;
+    --line-strong: #b3bccc;
+    --accent: #2f6fed;
+    --accent-ink: #ffffff;
+
+    --cell-bg: #ffffff;
+    --cell-hover: #e9eefb;
+    --yes-bg: #cdeedd;
+    --yes-fg: #0d5a37;
+    --no-fg: #c0392b;
+    --note: #b8860b;
+
+    color-scheme: light;
+  }
+}
+
+* { box-sizing: border-box; }
+
+body {
+  margin: 0;
+  background: var(--bg);
+  color: var(--text);
+  font: 15px/1.45 system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial, sans-serif;
+}
+
+.app { max-width: 1200px; margin: 0 auto; padding: 20px 22px 60px; }
+
+/* ---- GameStateTracker banner ---- */
+.gst-banner {
+  background: linear-gradient(90deg, var(--accent), transparent);
+  color: var(--text);
+  padding: 6px 16px;
+  font-size: 13px;
+  font-weight: 600;
+  border-bottom: 1px solid var(--line);
+}
+
+/* ---- View chrome ---- */
+.view-head {
+  display: flex; align-items: center; justify-content: space-between;
+  gap: 12px; flex-wrap: wrap; margin-bottom: 16px;
+}
+.view-head-left { display: flex; align-items: center; gap: 12px; }
+.view-head-actions { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+.view-title { font-size: 22px; margin: 0; }
+.section-title { font-size: 16px; margin: 0; }
+
+/* ---- Buttons & inputs ---- */
+.btn {
+  background: var(--panel-2); color: var(--text);
+  border: 1px solid var(--line); border-radius: 8px;
+  padding: 8px 12px; font-size: 14px; cursor: pointer;
+}
+.btn:hover { border-color: var(--line-strong); }
+.btn-primary { background: var(--accent); color: var(--accent-ink); border-color: transparent; font-weight: 600; }
+.btn-ghost { background: transparent; }
+.btn-small { padding: 4px 9px; font-size: 13px; border-radius: 6px; }
+
+.input {
+  background: var(--panel); color: var(--text);
+  border: 1px solid var(--line); border-radius: 8px;
+  padding: 8px 10px; font: inherit; width: 100%;
+}
+.input:focus { outline: 2px solid var(--accent); outline-offset: -1px; }
+
+.field { display: block; margin-bottom: 14px; max-width: 640px; }
+.field-label { display: block; font-size: 13px; color: var(--muted); margin-bottom: 4px; }
+
+.empty-state { color: var(--muted); padding: 30px 0; }
+.warn { color: var(--note); font-size: 13px; }
+
+/* ---- Home ---- */
+.folder { margin-bottom: 26px; }
+.folder-head { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; margin-bottom: 10px; }
+.folder-name { font-size: 18px; margin: 0; cursor: text; }
+.folder-name-input { max-width: 260px; }
+.folder-actions { display: flex; gap: 6px; }
+.folder-empty { color: var(--muted); font-size: 14px; margin: 6px 0 0; }
+
+.puzzle-list { list-style: none; margin: 0; padding: 0; display: grid; gap: 10px; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); }
+.puzzle-card {
+  display: flex; align-items: stretch; justify-content: space-between;
+  background: var(--panel); border: 1px solid var(--line); border-radius: 10px; overflow: hidden;
+}
+.puzzle-card-main {
+  flex: 1; text-align: left; background: transparent; color: inherit; border: none;
+  cursor: pointer; padding: 12px 14px; display: flex; flex-direction: column; gap: 3px;
+}
+.puzzle-card-main:hover { background: var(--panel-2); }
+.puzzle-card-name { font-weight: 600; }
+.puzzle-card-meta { font-size: 12px; color: var(--muted); }
+.puzzle-card-actions { display: flex; flex-direction: column; justify-content: center; padding: 6px; gap: 4px; border-left: 1px solid var(--line); }
+
+/* ---- Editor ---- */
+.editor-cats-head { display: flex; align-items: baseline; gap: 12px; margin: 18px 0 10px; }
+.editor-cats { display: grid; gap: 12px; grid-template-columns: repeat(auto-fill, minmax(240px, 1fr)); margin-bottom: 14px; }
+.cat-card { background: var(--panel); border: 1px solid var(--line); border-radius: 10px; padding: 12px; }
+.cat-card-head { display: flex; gap: 8px; margin-bottom: 10px; }
+.cat-name-input { font-weight: 600; }
+.cat-items { display: flex; flex-direction: column; gap: 6px; }
+.cat-item-row { display: flex; gap: 6px; align-items: center; }
+
+/* ---- Player ---- */
+.flavor { color: var(--muted); max-width: 720px; margin: 0 0 12px; }
+.legend { font-size: 13px; color: var(--muted); display: flex; align-items: center; gap: 6px; flex-wrap: wrap; }
+.chip { display: inline-flex; align-items: center; justify-content: center; min-width: 22px; height: 20px; padding: 0 6px; border: 1px solid var(--line); border-radius: 5px; font-size: 12px; }
+.chip-no { color: var(--no-fg); }
+.chip-yes { color: var(--yes-fg); background: var(--yes-bg); }
+.toggle { display: inline-flex; align-items: center; gap: 6px; font-size: 13px; color: var(--muted); cursor: pointer; }
+
+.grid-scroll { overflow: auto; padding-bottom: 12px; }
+
+/* ---- The grid ---- */
+.grid { display: inline-flex; flex-direction: column; margin-top: 8px; }
+.band { display: flex; align-items: stretch; }
+
+.row-header { width: var(--lh); display: flex; align-items: stretch; border-left: 2px solid var(--line-strong); border-bottom: 2px solid var(--line-strong); }
+.header-band .row-header.corner { border-bottom: none; border-left: none; }
+.row-header-name { width: 22px; writing-mode: vertical-rl; transform: rotate(180deg); display: flex; align-items: center; justify-content: center; font-size: 12px; font-weight: 700; color: var(--muted); background: var(--panel-2); }
+.row-items { flex: 1; display: flex; flex-direction: column; }
+.row-item { height: var(--cell); display: flex; align-items: center; justify-content: flex-end; padding: 0 8px; font-size: 12px; overflow: hidden; white-space: nowrap; border-top: 1px solid var(--line); }
+.row-item:first-child { border-top: none; }
+.row-item-text { overflow: hidden; text-overflow: ellipsis; }
+
+.colgroup { display: flex; flex-direction: column; border-left: 2px solid var(--line-strong); }
+.colgroup-name { height: 24px; display: flex; align-items: center; justify-content: center; font-size: 12px; font-weight: 700; color: var(--muted); background: var(--panel-2); }
+.colgroup-items { display: flex; height: var(--col-label-h); }
+.col-item { width: var(--cell); display: flex; align-items: flex-end; justify-content: center; padding-bottom: 6px; font-size: 12px; border-left: 1px solid var(--line); }
+.col-item:first-child { border-left: none; }
+.col-item-text { writing-mode: vertical-rl; transform: rotate(180deg); max-height: calc(var(--col-label-h) - 12px); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+
+.block { display: flex; flex-direction: column; border-left: 2px solid var(--line-strong); }
+.block-spacer { border-left: 2px solid transparent; }
+.block-row { display: flex; height: var(--cell); }
+
+.cell-wrap { position: relative; width: var(--cell); height: var(--cell); }
+.cell {
+  width: 100%; height: 100%; border: 1px solid var(--line);
+  background: var(--cell-bg); color: var(--text); cursor: pointer;
+  display: flex; align-items: center; justify-content: center; padding: 0; font-size: 16px;
+}
+.cell:hover { background: var(--cell-hover); }
+.cell-no { color: var(--no-fg); }
+.cell-yes { background: var(--yes-bg); color: var(--yes-fg); font-weight: 700; }
+.cell-glyph { line-height: 1; pointer-events: none; }
+.cell-note-dot { position: absolute; top: 2px; right: 2px; width: 6px; height: 6px; border-radius: 50%; background: var(--note); }
+
+/* ---- Note popover ---- */
+.note-popover {
+  position: absolute; z-index: 20; top: calc(var(--cell) + 4px); left: 0;
+  width: 200px; background: var(--panel); border: 1px solid var(--line-strong);
+  border-radius: 10px; padding: 10px; box-shadow: 0 8px 24px rgba(0,0,0,0.35);
+}
+.note-popover-head { font-size: 12px; color: var(--muted); margin-bottom: 6px; }
+.note-input { width: 100%; min-height: 60px; resize: vertical; background: var(--panel-2); color: var(--text); border: 1px solid var(--line); border-radius: 6px; padding: 6px; font: inherit; }
+.note-popover-actions { display: flex; gap: 6px; margin-top: 8px; }
