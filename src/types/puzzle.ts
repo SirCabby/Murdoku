@@ -119,6 +119,15 @@ export interface Puzzle {
    * has no spatial meaning, unlike the maps above.
    */
   personas: Persona[]
+  /**
+   * The player's placement guesses: which personas they think occupy each cell.
+   * Keyed by `"x,y"` (always an existing cell) to an array of persona ids; a cell
+   * can hold several guesses at once, so the value is a list rather than a single
+   * id. The ids point into `personas` — the letters shown in a cell are derived
+   * from them (see `lib/personas.ts`), never stored. Removing a cell drops its
+   * entry, and removing a persona strips its id from every cell.
+   */
+  guesses: Record<string, string[]>
   createdAt: number
   updatedAt: number
 }
@@ -132,7 +141,7 @@ export interface Folder {
 
 /** The entire persisted library — one blob in localStorage / a save file. */
 export interface Library {
-  version: 7
+  version: 8
   folders: Folder[]
   puzzles: Record<string, Puzzle>
 }

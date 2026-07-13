@@ -230,6 +230,30 @@ body {
 .player-board .cell-yes { background: var(--yes-bg); color: var(--yes-fg); }
 .cell-note-dot { position: absolute; top: 2px; right: 2px; width: 6px; height: 6px; border-radius: 50%; background: var(--note); }
 
+/* Placement guesses: a compact grid of persona-letter chips filling a play cell.
+   Click-through so the cell button beneath keeps the placement gesture. */
+.guess-grid {
+  position: absolute; inset: 5px; z-index: 8;
+  display: grid; gap: 3px; place-content: center; justify-items: center; align-items: center;
+  pointer-events: none;
+}
+.guess-chip {
+  min-width: 17px; height: 17px; padding: 0 3px; border-radius: 4px;
+  display: inline-flex; align-items: center; justify-content: center;
+  font-size: 11px; font-weight: 700; line-height: 1; letter-spacing: 0.02em;
+  background: var(--accent); color: var(--accent-ink);
+}
+.guess-chip-victim { background: var(--panel-2); color: var(--text); border: 1px solid var(--line-strong); }
+/* When a persona is picked up the whole board reads as "placing". */
+.player-board.is-placing .cell { cursor: crosshair; }
+
+/* The picked-up persona's letter rides the cursor (positioned via a transform). */
+.guess-cursor { position: fixed; top: 0; left: 0; z-index: 40; pointer-events: none; }
+.guess-cursor .guess-chip {
+  min-width: 22px; height: 22px; font-size: 13px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.35);
+}
+
 /* ---- Walls (room boundaries) ---- */
 /* Player: read-only lines straddling the gridline between two cells. */
 .wall-line { z-index: 5; pointer-events: none; background: var(--wall); border-radius: 2px; }
@@ -424,11 +448,16 @@ body {
   display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px;
 }
 .persona-list-title { grid-column: 1 / -1; margin: 0 0 2px; font-size: 15px; }
+.persona-list-hint { grid-column: 1 / -1; margin: 0 0 4px; font-size: 12px; color: var(--muted); }
 .persona-list .persona-card { padding: 10px; gap: 10px; }
 .persona-read { min-width: 0; display: flex; flex-direction: column; gap: 3px; }
 .persona-read-name { font-weight: 600; font-size: 14px; overflow-wrap: anywhere; }
 .persona-read-name.is-empty { font-weight: 400; font-style: italic; color: var(--muted); }
 .persona-read-desc { font-size: 12px; color: var(--muted); line-height: 1.4; overflow-wrap: anywhere; }
+/* Interactive cast cards: pick a persona up as the placement tool. */
+.persona-card-btn { cursor: pointer; text-align: left; font: inherit; color: inherit; transition: border-color 0.08s, box-shadow 0.08s; }
+.persona-card-btn:hover { border-color: var(--line-strong); }
+.persona-card-btn.is-active { border-color: var(--accent); box-shadow: 0 0 0 1px var(--accent); }
 
 /* ---- Note popover ---- */
 .note-popover {

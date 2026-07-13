@@ -25,6 +25,11 @@ import {
   setObject as setObjectOp,
   setWindow as setWindowOp,
 } from '../lib/objects'
+import {
+  pruneGuessPersona,
+  pruneGuesses,
+  toggleGuess as toggleGuessOp,
+} from '../lib/guesses'
 import { cellKey } from '../lib/coords'
 import { newId } from '../lib/id'
 import { useFileSync } from './useFileSync'
@@ -73,6 +78,9 @@ export interface LibraryApi {
   cycleCell: (puzzleId: string, x: number, y: number) => void
   noteCell: (puzzleId: string, x: number, y: number, note: string) => void
   clearMarks: (puzzleId: string) => void
+  // Guesses (per-cell persona placements at play)
+  toggleGuess: (puzzleId: string, x: number, y: number, personaId: string) => void
+  clearGuesses: (puzzleId: string) => void
 }
 
 const LibraryContext = createContext<LibraryApi | null>(null)
@@ -145,6 +153,7 @@ export function LibraryProvider({ children }: { children: ReactNode }): JSX.Elem
           windows: {},
           labels: [],
           personas: defaultPersonas(),
+          guesses: {},
           createdAt: now(),
           updatedAt: now(),
         }
@@ -188,7 +197,9 @@ export function LibraryProvider({ children }: { children: ReactNode }): JSX.Elem
           // as window mounts.
           const objects = pruneObjects(p.objects, cells)
           const windows = pruneWindows(p.windows, cells, walls)
-          return { ...p, cells, walls, objects, windows }
+          // Removing a cell also drops any placement guesses that sat there.
+          const guesses = pruneGuesses(p.guesses, cells)
+          return { ...p, cells, walls, objects, windows, guesses }
         })
       },
 
@@ -202,6 +213,7 @@ export function LibraryProvider({ children }: { children: ReactNode }): JSX.Elem
             walls,
             objects: pruneObjects(p.objects, cells),
             windows: pruneWindows(p.windows, cells, walls),
+            guesses: pruneGuesses(p.guesses, cells),
           }
         })
       },
@@ -216,6 +228,8 @@ export function LibraryProvider({ children }: { children: ReactNode }): JSX.Elem
           // Labels are anchored in lattice space, so an empty shape leaves them
           // floating over nothing — clear them out with the cells they named.
           labels: [],
+          // Guesses are keyed by cell too; none survive an emptied shape.
+          guesses: {},
         }))
       },
 
@@ -326,7 +340,12 @@ export function LibraryProvider({ children }: { children: ReactNode }): JSX.Elem
           // The victim is permanent, and at least one suspect must remain.
           if (!target || target.role === 'victim') return p
           if (suspectsOf(p.personas).length <= 1) return p
-          return { ...p, personas: p.personas.filter((x) => x.id !== id) }
+          // Drop the removed suspect's letter from any cell it was guessed in.
+          return {
+            ...p,
+            personas: p.personas.filter((x) => x.id !== id),
+            guesses: pruneGuessPersona(p.guesses, id),
+          }
         })
       },
 
@@ -344,6 +363,22 @@ export function LibraryProvider({ children }: { children: ReactNode }): JSX.Elem
 
       clearMarks(puzzleId) {
         patchPuzzle(puzzleId, (p) => ({ ...p, cells: clearMarksOp(p.cells) }))
+      },
+
+      toggleGuess(puzzleId, x, y, personaId) {
+        patchPuzzle(puzzleId, (p) => {
+          // Only guess on real cells, and only with personas still in the cast.
+          if (!(cellKey(x, y) in p.cells)) return p
+          if (!p.personas.some((per) => per.id === personaId)) return p
+          const guesses = toggleGuessOp(p.guesses, x, y, personaId)
+          return guesses === p.guesses ? p : { ...p, guesses }
+        })
+      },
+
+      clearGuesses(puzzleId) {
+        patchPuzzle(puzzleId, (p) =>
+          Object.keys(p.guesses).length === 0 ? p : { ...p, guesses: {} }
+        )
       },
     }
   }, [library, patchPuzzle, replaceLibrary])

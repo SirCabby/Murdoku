@@ -1,14 +1,21 @@
 import type { CSSProperties } from 'react'
-import type { Puzzle } from '../types/puzzle'
+import type { Persona, Puzzle } from '../types/puzzle'
 import { boundsOf, parseCellKey } from '../lib/coords'
 import { parseWallKey, perimeterEdges } from '../lib/walls'
+import { personaLabel, suspectsOf, victimOf } from '../lib/personas'
 import { ObjectDecor, WindowDecor } from './BoardDecor'
 import { Cell } from './Cell'
+import type { GuessChip } from './Cell'
 
 interface PlayerBoardProps {
   puzzle: Puzzle
-  /** Cycle a cell's mark. Omit to render the board read-only (marks can't be changed). */
-  onCycle?: ((x: number, y: number) => void) | undefined
+  /**
+   * The persona currently picked up as the placement tool, if any. When set the
+   * board reads as "placing" (crosshair cursor) and a cell click fires `onGuess`.
+   */
+  activePersonaId?: string | null
+  /** Toggle the active persona's guess in a cell. Omit to render the board read-only. */
+  onGuess?: ((x: number, y: number) => void) | undefined
   /** Edit a cell's note. Omit to disable notes. */
   onNote?: ((x: number, y: number, note: string) => void) | undefined
 }
@@ -23,8 +30,14 @@ const PAD = 1
  * positions, so notches/holes show up as gaps rather than being collapsed away.
  * Objects, windows, and room names are drawn over the cells exactly as the
  * editor's read-only decor does, so the played board matches the edited one.
+ * Placement guesses are drawn inside each cell as a small grid of persona letters.
  */
-export function PlayerBoard({ puzzle, onCycle, onNote }: PlayerBoardProps): JSX.Element | null {
+export function PlayerBoard({
+  puzzle,
+  activePersonaId,
+  onGuess,
+  onNote,
+}: PlayerBoardProps): JSX.Element | null {
   const keys = Object.keys(puzzle.cells)
   const bounds = boundsOf(keys)
   if (!bounds) return null
@@ -39,8 +52,33 @@ export function PlayerBoard({ puzzle, onCycle, onNote }: PlayerBoardProps): JSX.
     gridTemplateRows: `repeat(${rows}, var(--cell))`,
   }
 
+  // Resolve guessed ids to display chips: the persona's derived letter plus its
+  // role, in a stable A, B, C… then V order regardless of the click order.
+  const byId = new Map(puzzle.personas.map((p) => [p.id, p]))
+  const order = new Map<string, number>()
+  const ordered: Persona[] = [
+    ...suspectsOf(puzzle.personas),
+    ...(victimOf(puzzle.personas) ? [victimOf(puzzle.personas)!] : []),
+  ]
+  ordered.forEach((p, i) => order.set(p.id, i))
+
+  function chipsFor(key: string): GuessChip[] {
+    const ids = puzzle.guesses[key] ?? []
+    return ids
+      .map((id) => byId.get(id))
+      .filter((p): p is Persona => Boolean(p))
+      .map((p) => ({
+        id: p.id,
+        label: personaLabel(puzzle.personas, p),
+        isVictim: p.role === 'victim',
+      }))
+      .sort((a, b) => (order.get(a.id) ?? 0) - (order.get(b.id) ?? 0))
+  }
+
+  const placing = Boolean(activePersonaId)
+
   return (
-    <div className="board player-board" style={style}>
+    <div className={`board player-board${placing ? ' is-placing' : ''}`} style={style}>
       {keys.map((key) => {
         const { x, y } = parseCellKey(key)
         const state = puzzle.cells[key]
@@ -53,7 +91,8 @@ export function PlayerBoard({ puzzle, onCycle, onNote }: PlayerBoardProps): JSX.
           <div key={key} className="cell-pos" style={pos}>
             <Cell
               state={state}
-              onCycle={onCycle ? () => onCycle(x, y) : undefined}
+              guesses={chipsFor(key)}
+              onPlace={placing && onGuess ? () => onGuess(x, y) : undefined}
               onNote={onNote ? (note) => onNote(x, y, note) : undefined}
             />
           </div>
