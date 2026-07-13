@@ -8,6 +8,12 @@ interface PersonaListProps {
   personas: Persona[]
   /** The persona currently picked up as the placement tool, if any. */
   activeId?: string | null
+  /**
+   * Persona id whose badge should read as highlighted — its square letter drawn
+   * orange to match its highlighted placements on the board. Set to the picked-up
+   * persona when the highlight toggle is on. Omit / null for no highlight.
+   */
+  highlightId?: string | null | undefined
   /** Pick up a persona (or, when it's already active, drop it) as the placement tool. */
   onPick?: ((id: string) => void) | undefined
   /** The current placement mode. Only meaningful alongside `onPick`. */
@@ -30,6 +36,7 @@ interface PersonaListProps {
 export function PersonaList({
   personas,
   activeId,
+  highlightId,
   onPick,
   mode = 'guess',
   onModeChange,
@@ -76,7 +83,10 @@ export function PersonaList({
           `${onPick ? ' persona-card-btn' : ''}${isActive ? ' is-active' : ''}`
         const body = (
           <>
-            <div className="persona-badge" aria-hidden="true">
+            <div
+              className={`persona-badge${persona.id === highlightId ? ' persona-badge-highlight' : ''}`}
+              aria-hidden="true"
+            >
               {label}
             </div>
             <div className="persona-read">

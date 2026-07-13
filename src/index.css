@@ -12,6 +12,8 @@
   --accent-ink: #0b1220;
   --victim: #a78bfa;      /* the victim reads purple, distinct from the blue suspects */
   --victim-ink: #14092b;
+  --highlight: #fb923c;   /* the picked-up persona's own marks, orange over blue/purple */
+  --highlight-ink: #2b1400;
 
   --cell-bg: #191c24;
   --cell-hover: #2a3040;
@@ -50,6 +52,8 @@
     --accent-ink: #ffffff;
     --victim: #7c3aed;
     --victim-ink: #ffffff;
+    --highlight: #ea580c;
+    --highlight-ink: #ffffff;
 
     --cell-bg: #ffffff;
     --cell-hover: #e9eefb;
@@ -264,6 +268,10 @@ body {
   background: var(--accent); color: var(--accent-ink);
 }
 .guess-chip-victim { background: var(--victim); color: var(--victim-ink); }
+/* The picked-up persona's own marks: orange, overriding the blue/purple above so
+   its existing placements stand out at a glance. Must follow the -victim rule to
+   win at equal specificity. */
+.guess-chip-highlight { background: var(--highlight); color: var(--highlight-ink); }
 
 /* A committed answer: one big persona letter in a chip centered in the play cell
    — a scaled-up sibling of the guess chip. Click-through like the guess grid so
@@ -280,6 +288,7 @@ body {
   background: var(--accent); color: var(--accent-ink); pointer-events: none;
 }
 .cell-answer-victim { background: var(--victim); color: var(--victim-ink); }
+.cell-answer-highlight { background: var(--highlight); color: var(--highlight-ink); }
 /* A crossed-out cell: the same box as an answer, greyed (like the victim, but a
    muted X rather than a persona letter). */
 .cell-answer-cross { background: var(--panel-2); color: var(--muted); border: 1px solid var(--line-strong); }
@@ -319,6 +328,9 @@ body {
 /* A committed answer stands out from a tentative guess with an inner ring. */
 .summary-chip-answer { box-shadow: inset 0 0 0 2px color-mix(in srgb, var(--accent-ink) 55%, transparent); }
 .summary-chip-answer.guess-chip-victim { box-shadow: inset 0 0 0 2px color-mix(in srgb, var(--victim-ink) 55%, transparent); }
+/* A highlighted answer's ring uses the orange ink so it stays legible on the
+   orange fill (follows the two rules above to win at equal specificity). */
+.summary-chip-answer.guess-chip-highlight { box-shadow: inset 0 0 0 2px color-mix(in srgb, var(--highlight-ink) 55%, transparent); }
 
 /* The picked-up persona's letter rides the cursor (positioned via a transform). */
 .guess-cursor { position: fixed; top: 0; left: 0; z-index: 40; pointer-events: none; }
@@ -511,6 +523,13 @@ body {
 .persona-badge-cross {
   background: var(--panel-2); color: var(--muted);
   border: 1px solid var(--line-strong);
+}
+/* The picked-up persona's own badge: orange, tying the selected card's square
+   letter to its highlighted marks on the board. Two classes so it out-specifies
+   the `.persona-card-victim .persona-badge` rule above (and follows it in source
+   order), overriding blue or purple. */
+.persona-badge.persona-badge-highlight {
+  background: var(--highlight); color: var(--highlight-ink);
 }
 .persona-fields { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 8px; }
 .persona-name { font-weight: 600; }

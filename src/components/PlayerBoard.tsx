@@ -22,6 +22,13 @@ interface PlayerBoardProps {
    * right doing the same per row. Read-only; off by default.
    */
   summaries?: boolean | undefined
+  /**
+   * Persona id whose placements should be highlighted: every guess and answer of
+   * that persona already on the board is drawn orange instead of blue/purple.
+   * Set to the picked-up persona (when the highlight toggle is on) so its marks
+   * stand out. Omit / null for no highlight.
+   */
+  highlightId?: string | null | undefined
   /** Place the active tool in a cell (guess, answer, or X, per the player's mode). Omit for read-only. */
   onPlace?: ((x: number, y: number) => void) | undefined
 }
@@ -45,6 +52,7 @@ export function PlayerBoard({
   puzzle,
   active,
   summaries,
+  highlightId,
   onPlace,
 }: PlayerBoardProps): JSX.Element | null {
   const keys = Object.keys(puzzle.cells)
@@ -150,6 +158,7 @@ export function PlayerBoard({
               guesses={chipsFor(key)}
               answer={answerFor(key)}
               cross={puzzle.crosses[key] === true}
+              highlightId={highlightId}
               onPlace={placing && !blocked && onPlace ? () => onPlace(x, y) : undefined}
             />
           </div>
@@ -226,7 +235,11 @@ export function PlayerBoard({
               {chips.map((c) => (
                 <span
                   key={c.id}
-                  className={`guess-chip${c.isVictim ? ' guess-chip-victim' : ''}${c.isAnswer ? ' summary-chip-answer' : ''}`}
+                  className={
+                    `guess-chip${c.isVictim ? ' guess-chip-victim' : ''}` +
+                    `${c.isAnswer ? ' summary-chip-answer' : ''}` +
+                    `${c.id === highlightId ? ' guess-chip-highlight' : ''}`
+                  }
                 >
                   {c.label}
                 </span>
@@ -247,7 +260,11 @@ export function PlayerBoard({
               {chips.map((c) => (
                 <span
                   key={c.id}
-                  className={`guess-chip${c.isVictim ? ' guess-chip-victim' : ''}${c.isAnswer ? ' summary-chip-answer' : ''}`}
+                  className={
+                    `guess-chip${c.isVictim ? ' guess-chip-victim' : ''}` +
+                    `${c.isAnswer ? ' summary-chip-answer' : ''}` +
+                    `${c.id === highlightId ? ' guess-chip-highlight' : ''}`
+                  }
                 >
                   {c.label}
                 </span>

@@ -22,6 +22,12 @@ interface CellProps {
    * X. Takes over the cell, hiding any answer or guesses.
    */
   cross?: boolean | undefined
+  /**
+   * Persona id whose chips (guess or answer) should read as highlighted — drawn
+   * orange instead of their usual blue/purple. Set to the picked-up persona so
+   * its existing placements stand out. Omit / null for no highlight.
+   */
+  highlightId?: string | null | undefined
   /** Left-click handler that places the active tool (guess, answer, or X). Omit for read-only. */
   onPlace?: (() => void) | undefined
 }
@@ -32,7 +38,7 @@ interface CellProps {
  * committed answer fills the cell as one large letter (X > answer); otherwise any
  * guesses are drawn as a small grid of chips.
  */
-export function Cell({ state, guesses, answer, cross, onPlace }: CellProps): JSX.Element {
+export function Cell({ state, guesses, answer, cross, highlightId, onPlace }: CellProps): JSX.Element {
   // Precedence: an X or a committed answer takes the cell over (X wins); only a
   // bare cell shows its guesses.
   const showAnswer = !cross && Boolean(answer)
@@ -61,7 +67,10 @@ export function Cell({ state, guesses, answer, cross, onPlace }: CellProps): JSX
         )}
         {showAnswer && answer && (
           <span
-            className={`cell-answer${answer.isVictim ? ' cell-answer-victim' : ''}`}
+            className={
+              `cell-answer${answer.isVictim ? ' cell-answer-victim' : ''}` +
+              `${answer.id === highlightId ? ' cell-answer-highlight' : ''}`
+            }
             aria-hidden="true"
           >
             {answer.label}
@@ -76,7 +85,10 @@ export function Cell({ state, guesses, answer, cross, onPlace }: CellProps): JSX
             {chips.map((chip) => (
               <span
                 key={chip.id}
-                className={`guess-chip${chip.isVictim ? ' guess-chip-victim' : ''}`}
+                className={
+                  `guess-chip${chip.isVictim ? ' guess-chip-victim' : ''}` +
+                  `${chip.id === highlightId ? ' guess-chip-highlight' : ''}`
+                }
               >
                 {chip.label}
               </span>

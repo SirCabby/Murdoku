@@ -3,8 +3,10 @@ import { useLibrary } from '../state/LibraryContext'
 import { personaLabel } from '../lib/personas'
 import {
   loadAutoCleanup,
+  loadHighlightPlacements,
   loadShowSummaries,
   saveAutoCleanup,
+  saveHighlightPlacements,
   saveShowSummaries,
 } from '../lib/prefs'
 import { usePlayHistory } from '../state/usePlayHistory'
@@ -35,6 +37,15 @@ export function PuzzlePlayer({ puzzleId, onBack, onEdit }: PuzzlePlayerProps): J
     const next = !summaries
     setSummaries(next)
     saveShowSummaries(next)
+  }
+  // Highlight the picked-up persona's existing placements (their guesses/answers
+  // already on the board turn orange). A view preference like the summaries
+  // switch, stored under its own localStorage key. Defaults on.
+  const [highlight, setHighlight] = useState(loadHighlightPlacements)
+  function toggleHighlight(): void {
+    const next = !highlight
+    setHighlight(next)
+    saveHighlightPlacements(next)
   }
   // "Clean up" behaviour when committing an answer. Manual (off) leaves the board
   // as-is; Automatic (on) crosses out the rest of the answered cell's row and
@@ -202,6 +213,15 @@ export function PuzzlePlayer({ puzzleId, onBack, onEdit }: PuzzlePlayerProps): J
           >
             Summaries
           </button>
+          <button
+            type="button"
+            className={`btn${highlight ? ' is-active' : ''}`}
+            aria-pressed={highlight}
+            title="Highlight a picked-up person's placements in orange"
+            onClick={toggleHighlight}
+          >
+            Highlight
+          </button>
           <button type="button" className="btn" onClick={onEdit}>Edit puzzle</button>
         </div>
       </div>
@@ -211,6 +231,7 @@ export function PuzzlePlayer({ puzzleId, onBack, onEdit }: PuzzlePlayerProps): J
           <PersonaList
             personas={puzzle.personas}
             activeId={activePersona ? activeId : null}
+            highlightId={highlight && activePersona ? activeId : null}
             onPick={pickPersona}
             mode={mode}
             onModeChange={setMode}
@@ -222,6 +243,7 @@ export function PuzzlePlayer({ puzzleId, onBack, onEdit }: PuzzlePlayerProps): J
               puzzle={puzzle}
               active={holdingTool}
               summaries={summaries}
+              highlightId={highlight && activePersona ? activeId : null}
               onPlace={
                 holdingTool
                   ? (x, y) => {

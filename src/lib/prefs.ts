@@ -6,6 +6,7 @@
 
 const SUMMARIES_KEY = 'murdoku.ui.summaries'
 const CLEANUP_KEY = 'murdoku.ui.cleanup'
+const HIGHLIGHT_KEY = 'murdoku.ui.highlight'
 
 /** Whether the play view shows its per-column / per-row summaries. Defaults off. */
 export function loadShowSummaries(): boolean {
@@ -42,6 +43,28 @@ export function loadAutoCleanup(): boolean {
 export function saveAutoCleanup(on: boolean): void {
   try {
     localStorage.setItem(CLEANUP_KEY, on ? '1' : '0')
+  } catch {
+    // Storage full / unavailable (e.g. private mode). Non-fatal.
+  }
+}
+
+/**
+ * Whether picking up a persona highlights its existing placements — every guess
+ * and answer of that persona already on the board turns orange instead of its
+ * usual blue/purple — so you can spot where they are at a glance. A view
+ * preference like the two above, under its own key. Defaults on.
+ */
+export function loadHighlightPlacements(): boolean {
+  try {
+    return localStorage.getItem(HIGHLIGHT_KEY) !== '0'
+  } catch {
+    return true
+  }
+}
+
+export function saveHighlightPlacements(on: boolean): void {
+  try {
+    localStorage.setItem(HIGHLIGHT_KEY, on ? '1' : '0')
   } catch {
     // Storage full / unavailable (e.g. private mode). Non-fatal.
   }
