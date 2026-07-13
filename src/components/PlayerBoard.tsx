@@ -15,16 +15,23 @@ interface PlayerBoardProps {
    * `onPlace`.
    */
   active?: boolean | undefined
+  /**
+   * Show per-column / per-row summaries: a strip above the board listing the
+   * personas (guessed or answered) somewhere in each column, and a strip to its
+   * right doing the same per row. Read-only; off by default.
+   */
+  summaries?: boolean | undefined
   /** Place the active tool in a cell (guess, answer, or X, per the player's mode). Omit for read-only. */
   onPlace?: ((x: number, y: number) => void) | undefined
   /** Edit a cell's note. Omit to disable notes. */
   onNote?: ((x: number, y: number, note: string) => void) | undefined
 }
 
-// A one-cell ring around the shape, matching every editor board, so top-/left-
-// perimeter windows (keyed off a cell just outside the shape) land on a real
-// grid track and the puzzle renders at the same size players saw while editing.
-const PAD = 1
+/** One persona letter shown in a column/row summary, flagged if any cell in the lane answered it. */
+interface SummaryChip extends GuessChip {
+  /** True when this persona is a committed answer in the lane (not just a tentative guess). */
+  isAnswer: boolean
+}
 
 /**
  * Renders the puzzle's shape at play. Cells are placed at their real lattice
@@ -38,6 +45,7 @@ const PAD = 1
 export function PlayerBoard({
   puzzle,
   active,
+  summaries,
   onPlace,
   onNote,
 }: PlayerBoardProps): JSX.Element | null {
@@ -45,10 +53,16 @@ export function PlayerBoard({
   const bounds = boundsOf(keys)
   if (!bounds) return null
 
-  const originX = bounds.minX - PAD
-  const originY = bounds.minY - PAD
-  const cols = bounds.maxX - bounds.minX + 1 + PAD * 2
-  const rows = bounds.maxY - bounds.minY + 1 + PAD * 2
+  // Unlike the editor — whose one-cell ring is the interactive "add cell" slots
+  // you paint to grow the shape — the play board reserves no space around the
+  // rooms: it's exactly the shape's bounding box. Perimeter windows would normally
+  // key off the (nonexistent) cell just outside the shape, but here `WindowDecor`
+  // re-seats those onto the existing neighbour instead (`anchorInCell`), so nothing
+  // ever needs an outside track and the summaries can hug the outer wall.
+  const originX = bounds.minX
+  const originY = bounds.minY
+  const cols = bounds.maxX - bounds.minX + 1
+  const rows = bounds.maxY - bounds.minY + 1
 
   const style: CSSProperties = {
     gridTemplateColumns: `repeat(${cols}, var(--cell))`,
@@ -85,9 +99,40 @@ export function PlayerBoard({
     return id ? chipFor(id) : null
   }
 
+  // Collapse a lane's cells (a whole column or row) into the distinct personas
+  // used there: each answered or guessed id once, answers taking precedence, in
+  // the same A, B, C… V order the cells use. Feeds the summary strips.
+  function laneSummary(laneKeys: string[]): SummaryChip[] {
+    const answered = new Map<string, boolean>() // id → committed as an answer somewhere in the lane
+    for (const key of laneKeys) {
+      const ans = puzzle.answers[key]
+      if (ans) answered.set(ans, true)
+      for (const id of puzzle.guesses[key] ?? []) if (!answered.has(id)) answered.set(id, false)
+    }
+    return [...answered.entries()]
+      .map(([id, isAnswer]) => {
+        const chip = chipFor(id)
+        return chip ? { ...chip, isAnswer } : null
+      })
+      .filter((c): c is SummaryChip => Boolean(c))
+      .sort((a, b) => (order.get(a.id) ?? 0) - (order.get(b.id) ?? 0))
+  }
+
+  // Group the existing cells by column (x) and row (y) so each lane summarises
+  // exactly the cells the board draws there.
+  const colKeys = new Map<number, string[]>()
+  const rowKeys = new Map<number, string[]>()
+  if (summaries) {
+    for (const key of keys) {
+      const { x, y } = parseCellKey(key)
+      ;(colKeys.get(x) ?? colKeys.set(x, []).get(x)!).push(key)
+      ;(rowKeys.get(y) ?? rowKeys.set(y, []).get(y)!).push(key)
+    }
+  }
+
   const placing = Boolean(active)
 
-  return (
+  const board = (
     <div className={`board player-board${placing ? ' is-placing' : ''}`} style={style}>
       {keys.map((key) => {
         const { x, y } = parseCellKey(key)
@@ -144,7 +189,7 @@ export function PlayerBoard({
         )
       })}
 
-      <WindowDecor puzzle={puzzle} originX={originX} originY={originY} />
+      <WindowDecor puzzle={puzzle} originX={originX} originY={originY} anchorInCell />
 
       {puzzle.labels.map((label) => {
         const text = label.text.trim()
@@ -159,6 +204,58 @@ export function PlayerBoard({
           </div>
         )
       })}
+    </div>
+  )
+
+  if (!summaries) return board
+
+  // Wrap the board with two summary strips that share its column / row tracks:
+  // one above listing each column's personas, one to the right listing each
+  // row's. Both reuse the board's origin so a lane lines up with its cells.
+  const colStyle: CSSProperties = { gridTemplateColumns: `repeat(${cols}, var(--cell))` }
+  const rowStyle: CSSProperties = { gridTemplateRows: `repeat(${rows}, var(--cell))` }
+
+  return (
+    <div className="player-board-frame">
+      <div className="summary-cols" style={colStyle} aria-hidden="true">
+        {[...colKeys].map(([x, laneKeys]) => {
+          const chips = laneSummary(laneKeys)
+          if (chips.length === 0) return null
+          return (
+            <div key={`col-${x}`} className="summary-lane summary-col" style={{ gridColumn: x - originX + 1 }}>
+              {chips.map((c) => (
+                <span
+                  key={c.id}
+                  className={`guess-chip${c.isVictim ? ' guess-chip-victim' : ''}${c.isAnswer ? ' summary-chip-answer' : ''}`}
+                >
+                  {c.label}
+                </span>
+              ))}
+            </div>
+          )
+        })}
+      </div>
+
+      {board}
+
+      <div className="summary-rows" style={rowStyle} aria-hidden="true">
+        {[...rowKeys].map(([y, laneKeys]) => {
+          const chips = laneSummary(laneKeys)
+          if (chips.length === 0) return null
+          return (
+            <div key={`row-${y}`} className="summary-lane summary-row" style={{ gridRow: y - originY + 1 }}>
+              {chips.map((c) => (
+                <span
+                  key={c.id}
+                  className={`guess-chip${c.isVictim ? ' guess-chip-victim' : ''}${c.isAnswer ? ' summary-chip-answer' : ''}`}
+                >
+                  {c.label}
+                </span>
+              ))}
+            </div>
+          )
+        })}
+      </div>
     </div>
   )
 }

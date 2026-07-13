@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from 'react'
 import { useLibrary } from '../state/LibraryContext'
 import { personaLabel } from '../lib/personas'
+import { loadShowSummaries, saveShowSummaries } from '../lib/prefs'
 import { PlayerBoard } from './PlayerBoard'
 import { PersonaList } from './PersonaList'
 import type { PlaceMode } from './PersonaList'
@@ -20,6 +21,15 @@ export function PuzzlePlayer({ puzzleId, onBack, onEdit }: PuzzlePlayerProps): J
   const [activeId, setActiveId] = useState<string | null>(null)
   const [crossActive, setCrossActive] = useState(false)
   const [mode, setMode] = useState<PlaceMode>('guess')
+  // Show per-column / per-row persona summaries around the board. A view
+  // preference (not puzzle content), so it's read from / written to its own
+  // localStorage key and survives refreshes.
+  const [summaries, setSummaries] = useState(loadShowSummaries)
+  function toggleSummaries(): void {
+    const next = !summaries
+    setSummaries(next)
+    saveShowSummaries(next)
+  }
   // Holding Shift temporarily flips guess↔answer, so you can drop the opposite of
   // the picked mode without touching the dropdown.
   const [shiftHeld, setShiftHeld] = useState(false)
@@ -116,6 +126,14 @@ export function PuzzlePlayer({ puzzleId, onBack, onEdit }: PuzzlePlayerProps): J
           <h1 className="view-title">{puzzle.name}</h1>
         </div>
         <div className="view-head-actions">
+          <button
+            type="button"
+            className={`btn${summaries ? ' is-active' : ''}`}
+            aria-pressed={summaries}
+            onClick={toggleSummaries}
+          >
+            Summaries
+          </button>
           <button type="button" className="btn" onClick={onEdit}>Edit puzzle</button>
         </div>
       </div>
@@ -135,6 +153,7 @@ export function PuzzlePlayer({ puzzleId, onBack, onEdit }: PuzzlePlayerProps): J
             <PlayerBoard
               puzzle={puzzle}
               active={holdingTool}
+              summaries={summaries}
               onPlace={
                 holdingTool
                   ? (x, y) => {

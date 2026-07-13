@@ -123,6 +123,9 @@ body {
 .btn-primary { background: var(--accent); color: var(--accent-ink); border-color: transparent; font-weight: 600; }
 .btn-ghost { background: transparent; }
 .btn-small { padding: 4px 9px; font-size: 13px; border-radius: 6px; }
+/* A toggled-on button (e.g. the Summaries switch), matching the accent ring used
+   on active persona cards. */
+.btn.is-active { border-color: var(--accent); box-shadow: 0 0 0 1px var(--accent); }
 .btn:disabled { opacity: 0.5; cursor: default; }
 .btn:disabled:hover { border-color: var(--line); }
 
@@ -271,6 +274,37 @@ body {
 /* When a placement tool is held the whole board reads as "placing". */
 .player-board.is-placing .cell { cursor: crosshair; }
 
+/* ---- Column / row summaries ---- */
+/* The board flanked by two read-only strips: column summaries above, row
+   summaries to the right. A 2×2 grid whose first column/first row share the
+   board's own width/height so a strip's tracks line up with the board's. */
+.player-board-frame {
+  display: grid;
+  grid-template-columns: max-content max-content;
+  grid-template-rows: max-content max-content;
+  gap: 6px; width: max-content;
+}
+.player-board-frame > .summary-cols { grid-column: 1; grid-row: 1; }
+.player-board-frame > .board { grid-column: 1; grid-row: 2; }
+.player-board-frame > .summary-rows { grid-column: 2; grid-row: 2; }
+
+/* Each strip reuses the board's cell tracks (set inline) so a lane sits directly
+   over its column/row. Purely informational, so it never intercepts clicks. */
+.summary-cols { display: grid; align-items: end; pointer-events: none; }
+.summary-rows { display: grid; grid-auto-columns: max-content; justify-items: start; pointer-events: none; }
+
+/* A single column's or row's persona letters, packed toward the board. */
+.summary-lane { display: flex; flex-wrap: wrap; gap: 3px; }
+.summary-col { align-content: flex-end; justify-content: center; align-items: flex-end; padding: 2px; }
+.summary-row {
+  align-items: center; align-content: center; height: 100%;
+  max-width: calc(var(--cell) * 3); padding: 0 4px;
+}
+.summary-lane .guess-chip { min-width: 20px; height: 20px; font-size: 12px; }
+/* A committed answer stands out from a tentative guess with an inner ring. */
+.summary-chip-answer { box-shadow: inset 0 0 0 2px color-mix(in srgb, var(--accent-ink) 55%, transparent); }
+.summary-chip-answer.guess-chip-victim { box-shadow: inset 0 0 0 2px color-mix(in srgb, var(--victim-ink) 55%, transparent); }
+
 /* The picked-up persona's letter rides the cursor (positioned via a transform). */
 .guess-cursor { position: fixed; top: 0; left: 0; z-index: 40; pointer-events: none; }
 .guess-cursor .guess-chip {
@@ -362,6 +396,11 @@ body {
 /* Flip to face the opposite room on top- / right-perimeter walls. */
 .window-icon-h.window-icon-flip { transform: translateY(50%) rotate(180deg); }
 .window-icon-v.window-icon-flip { transform: translateX(50%) rotate(-90deg); }
+/* Padless boards (the play view) hang a top-/left-perimeter window on the near
+   edge of the existing neighbour instead of an outside pad cell: same wall line,
+   same inward facing, but keyed to a real cell so no outside track is needed. */
+.window-icon-h-below { justify-self: center; align-self: start; transform: translateY(-50%) rotate(180deg); }
+.window-icon-v-right { justify-self: start; align-self: center; transform: translateX(-50%) rotate(90deg); }
 
 /* ---- Object palette ---- */
 .palette {

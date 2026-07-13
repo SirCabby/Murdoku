@@ -18,6 +18,18 @@ interface DecorProps {
   originY: number
 }
 
+interface WindowDecorProps extends DecorProps {
+  /**
+   * Re-seat top-/left-perimeter windows onto their existing neighbour cell rather
+   * than the (nonexistent) cell just outside the shape. Boards that render a
+   * one-cell padding ring (every editor board) leave this off, so a perimeter
+   * window lands on the outside pad track as usual. The play board draws no such
+   * ring, so it turns this on to keep those windows on a real cell — the icon
+   * still sits on the same wall line, facing the same way.
+   */
+  anchorInCell?: boolean | undefined
+}
+
 const WINDOW_ICON = baseIconUrl('window')
 
 /**
@@ -93,30 +105,41 @@ export function ObjectDecor({ puzzle, originX, originY }: DecorProps): JSX.Eleme
  * Read-only window icons sitting on their walls, facing inward. Identical to the
  * icons `ObjectsBoard` draws, so windows look the same in every mode.
  */
-export function WindowDecor({ puzzle, originX, originY }: DecorProps): JSX.Element {
+export function WindowDecor({ puzzle, originX, originY, anchorInCell }: WindowDecorProps): JSX.Element {
   return (
     <>
       {Object.keys(puzzle.windows).map((key) => {
         const { x, y, orient } = parseWallKey(key)
-        const pos: CSSProperties = {
-          gridColumn: x - originX + 1,
-          gridRow: y - originY + 1,
-        }
         // A window faces into the room. The art defaults to facing up (h) /
         // right (v), toward the wall's top/right cell; flip it when that cell is
         // outside the shape (top- and right-perimeter walls), so it always
         // faces inward. Interior walls keep the default.
         const inwardCell = orient === 'h' ? cellKey(x, y) : cellKey(x + 1, y)
         const flip = !(inwardCell in puzzle.cells)
+
+        // The window normally hangs on the *far* edge of its keyed (top-left)
+        // cell. For a top-/left-perimeter wall that keyed cell is outside the
+        // shape, so on a padless board we re-seat the icon onto the near edge of
+        // the existing neighbour — the same wall line, still facing inward — so it
+        // needs no outside track.
+        let gx = x
+        let gy = y
+        let cls = `window-icon window-icon-${orient}${flip ? ' window-icon-flip' : ''}`
+        if (anchorInCell && !(cellKey(x, y) in puzzle.cells)) {
+          if (orient === 'h') {
+            gy = y + 1 // top-perimeter: drop onto the cell below, on its top edge
+            cls = 'window-icon window-icon-h-below'
+          } else {
+            gx = x + 1 // left-perimeter: shift onto the cell right, on its left edge
+            cls = 'window-icon window-icon-v-right'
+          }
+        }
+        const pos: CSSProperties = {
+          gridColumn: gx - originX + 1,
+          gridRow: gy - originY + 1,
+        }
         return (
-          <img
-            key={`win-${key}`}
-            className={`window-icon window-icon-${orient}${flip ? ' window-icon-flip' : ''}`}
-            style={pos}
-            src={WINDOW_ICON}
-            alt=""
-            aria-hidden="true"
-          />
+          <img key={`win-${key}`} className={cls} style={pos} src={WINDOW_ICON} alt="" aria-hidden="true" />
         )
       })}
     </>
