@@ -106,6 +106,9 @@ export interface LibraryApi {
   // Crosses (per-cell "ruled out" X at play)
   toggleCross: (puzzleId: string, x: number, y: number) => void
   clearCrosses: (puzzleId: string) => void
+  // Reset the whole solve: drop every guess, answer, and X in one step (the
+  // puzzle definition is untouched). Recorded as a single undo entry.
+  clearBoard: (puzzleId: string) => void
 }
 
 const LibraryContext = createContext<LibraryApi | null>(null)
@@ -470,6 +473,19 @@ export function LibraryProvider({ children }: { children: ReactNode }): JSX.Elem
       clearCrosses(puzzleId) {
         patchPuzzle(puzzleId, (p) =>
           Object.keys(p.crosses).length === 0 ? p : { ...p, crosses: {} }
+        )
+      },
+
+      clearBoard(puzzleId) {
+        patchPuzzle(puzzleId, (p) =>
+          // Nothing placed → no-op, so a reset on an empty board doesn't push a
+          // do-nothing undo step. Otherwise wipe all three play maps in one
+          // update, which the history observer records as a single undoable step.
+          Object.keys(p.guesses).length === 0 &&
+          Object.keys(p.answers).length === 0 &&
+          Object.keys(p.crosses).length === 0
+            ? p
+            : { ...p, guesses: {}, answers: {}, crosses: {} }
         )
       },
     }

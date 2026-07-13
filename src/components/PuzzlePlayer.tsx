@@ -19,7 +19,7 @@ interface PuzzlePlayerProps {
 }
 
 export function PuzzlePlayer({ puzzleId, onBack, onEdit }: PuzzlePlayerProps): JSX.Element {
-  const { library, toggleGuess, setAnswer, toggleCross } = useLibrary()
+  const { library, toggleGuess, setAnswer, toggleCross, clearBoard } = useLibrary()
 
   // The tool picked up for placing. Either a persona (its letter rides the cursor)
   // or the X tool (`crossActive`) — mutually exclusive. Cleared on Esc or when the
@@ -136,6 +136,11 @@ export function PuzzlePlayer({ puzzleId, onBack, onEdit }: PuzzlePlayerProps): J
   }
 
   const hasCells = Object.keys(puzzle.cells).length > 0
+  // Anything placed on the board — enables the reset button.
+  const hasMarks =
+    Object.keys(puzzle.guesses).length > 0 ||
+    Object.keys(puzzle.answers).length > 0 ||
+    Object.keys(puzzle.crosses).length > 0
 
   return (
     <div className="view player">
@@ -167,6 +172,17 @@ export function PuzzlePlayer({ puzzleId, onBack, onEdit }: PuzzlePlayerProps): J
               ↷
             </button>
           </div>
+          <button
+            type="button"
+            className="btn btn-ghost"
+            disabled={!hasMarks}
+            title="Clear all your marks from this board"
+            onClick={() => {
+              if (hasMarks && confirm('Clear all your marks from this board?')) clearBoard(puzzleId)
+            }}
+          >
+            Reset board
+          </button>
           <label className="cleanup-toggle">
             <span className="cleanup-toggle-label">Clean up:</span>
             <select
