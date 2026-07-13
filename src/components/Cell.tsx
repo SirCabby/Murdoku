@@ -73,6 +73,12 @@ export function Cell({ state, guesses, answer, cross, onPlace, onNote }: CellPro
         className={`cell cell-${state.mark}${onPlace ? '' : ' cell-readonly'}`}
         title={hasNote ? state.note : undefined}
         onClick={onPlace}
+        // Placement is mouse-driven — don't let the click leave the cell focused.
+        // A focused cell lights up its default focus ring the instant Shift is
+        // pressed (the guess/answer flip re-triggers :focus-visible), reading as a
+        // stray "selected" border. Keyboard Tab still focuses (no mousedown), so
+        // keyboard users keep their ring.
+        onMouseDown={onPlace ? (e) => e.preventDefault() : undefined}
         onContextMenu={onNote ? openNote : undefined}
       >
         <span className="cell-glyph">{MARK_GLYPH[state.mark]}</span>

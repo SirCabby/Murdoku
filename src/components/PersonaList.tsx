@@ -44,8 +44,8 @@ export function PersonaList({
     ? 'Click cells to mark them with an X · click X again to put it down'
     : activeId
       ? mode === 'answer'
-        ? 'Click cells to set the answer · Esc to put down'
-        : 'Click cells to add a guess · Esc to put down'
+        ? 'Click cells to set the answer · hold Shift to guess · Esc to put down'
+        : 'Click cells to add a guess · hold Shift to set the answer · Esc to put down'
       : 'Click a person (or X), then click cells to place them.'
 
   return (

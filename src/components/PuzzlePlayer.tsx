@@ -20,6 +20,9 @@ export function PuzzlePlayer({ puzzleId, onBack, onEdit }: PuzzlePlayerProps): J
   const [activeId, setActiveId] = useState<string | null>(null)
   const [crossActive, setCrossActive] = useState(false)
   const [mode, setMode] = useState<PlaceMode>('guess')
+  // Holding Shift temporarily flips guess↔answer, so you can drop the opposite of
+  // the picked mode without touching the dropdown.
+  const [shiftHeld, setShiftHeld] = useState(false)
   const cursorRef = useRef<HTMLDivElement | null>(null)
 
   const puzzle = library.puzzles[puzzleId]
@@ -29,6 +32,9 @@ export function PuzzlePlayer({ puzzleId, onBack, onEdit }: PuzzlePlayerProps): J
   // A tool is in hand when a persona is picked up or the X tool is active. That's
   // when the board is clickable.
   const holdingTool = crossActive || Boolean(activePersona)
+  // The mode a click actually lands in: holding Shift flips guess↔answer while the
+  // key is down (the X tool ignores mode, so this only matters with a persona).
+  const effectiveMode: PlaceMode = shiftHeld ? (mode === 'answer' ? 'guess' : 'answer') : mode
 
   // Pick up a persona (dropping the X tool), or the X tool (dropping the persona).
   function pickPersona(id: string): void {
@@ -56,6 +62,26 @@ export function PuzzlePlayer({ puzzleId, onBack, onEdit }: PuzzlePlayerProps): J
     }
     window.addEventListener('keydown', onKey)
     return () => window.removeEventListener('keydown', onKey)
+  }, [])
+
+  // Track whether Shift is down so a click can land in the inverted mode. Listened
+  // for globally (not gated on holding a tool) so picking one up mid-hold already
+  // reflects the key; reset on blur since an alt-tab can swallow the keyup.
+  useEffect(() => {
+    function onKey(e: KeyboardEvent): void {
+      if (e.key === 'Shift') setShiftHeld(e.type === 'keydown')
+    }
+    function onBlur(): void {
+      setShiftHeld(false)
+    }
+    window.addEventListener('keydown', onKey)
+    window.addEventListener('keyup', onKey)
+    window.addEventListener('blur', onBlur)
+    return () => {
+      window.removeEventListener('keydown', onKey)
+      window.removeEventListener('keyup', onKey)
+      window.removeEventListener('blur', onBlur)
+    }
   }, [])
 
   // While a tool is in hand, its chip follows the cursor. Positioned via a ref so
@@ -114,7 +140,7 @@ export function PuzzlePlayer({ puzzleId, onBack, onEdit }: PuzzlePlayerProps): J
                   ? (x, y) => {
                       if (crossActive) toggleCross(puzzleId, x, y)
                       else if (activePersona) {
-                        if (mode === 'answer') setAnswer(puzzleId, x, y, activePersona.id)
+                        if (effectiveMode === 'answer') setAnswer(puzzleId, x, y, activePersona.id)
                         else toggleGuess(puzzleId, x, y, activePersona.id)
                       }
                     }
@@ -135,7 +161,7 @@ export function PuzzlePlayer({ puzzleId, onBack, onEdit }: PuzzlePlayerProps): J
           ref={cursorRef}
           className={
             `guess-cursor` +
-            (crossActive ? ' guess-cursor-cross' : mode === 'answer' ? ' guess-cursor-answer' : '')
+            (crossActive ? ' guess-cursor-cross' : effectiveMode === 'answer' ? ' guess-cursor-answer' : '')
           }
           aria-hidden="true"
         >
