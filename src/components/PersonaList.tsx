@@ -14,6 +14,10 @@ interface PersonaListProps {
   mode?: PlaceMode | undefined
   /** Switch placement mode. Omit (with `onPick`) to hide the mode control. */
   onModeChange?: ((mode: PlaceMode) => void) | undefined
+  /** Whether the X tool is the one picked up (mutually exclusive with a persona). */
+  crossActive?: boolean | undefined
+  /** Pick up (or, when already active, drop) the X tool. Omit to hide the X card. */
+  onPickCross?: (() => void) | undefined
 }
 
 /**
@@ -29,14 +33,20 @@ export function PersonaList({
   onPick,
   mode = 'guess',
   onModeChange,
+  crossActive,
+  onPickCross,
 }: PersonaListProps): JSX.Element | null {
   const ordered = [...suspectsOf(personas), ...(victimOf(personas) ? [victimOf(personas)!] : [])]
   if (ordered.length === 0) return null
 
-  const activeHint =
-    mode === 'answer'
-      ? 'Click cells to set the answer · Esc to put down'
-      : 'Click cells to add a guess · Esc to put down'
+  // The X tool needs no persona; guess/answer prompt to pick one first.
+  const hint = crossActive
+    ? 'Click cells to mark them with an X · click X again to put it down'
+    : activeId
+      ? mode === 'answer'
+        ? 'Click cells to set the answer · Esc to put down'
+        : 'Click cells to add a guess · Esc to put down'
+      : 'Click a person (or X), then click cells to place them.'
 
   return (
     <div className="persona-list">
@@ -54,11 +64,7 @@ export function PersonaList({
           </select>
         </label>
       )}
-      {onPick && (
-        <p className="persona-list-hint">
-          {activeId ? activeHint : 'Click a person, then click cells to place them.'}
-        </p>
-      )}
+      {onPick && <p className="persona-list-hint">{hint}</p>}
       {ordered.map((persona) => {
         const isVictim = persona.role === 'victim'
         const label = personaLabel(personas, persona)
@@ -100,6 +106,22 @@ export function PersonaList({
           </button>
         )
       })}
+
+      {onPickCross && (
+        <button
+          type="button"
+          className={`persona-card persona-card-btn persona-card-cross${crossActive ? ' is-active' : ''}`}
+          aria-pressed={Boolean(crossActive)}
+          onClick={onPickCross}
+        >
+          <div className="persona-badge persona-badge-cross" aria-hidden="true">
+            X
+          </div>
+          <div className="persona-read">
+            <div className="persona-read-name">Cross out</div>
+          </div>
+        </button>
+      )}
     </div>
   )
 }

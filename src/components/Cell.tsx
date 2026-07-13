@@ -19,19 +19,24 @@ interface CellProps {
    * cell hides its guess grid — the two are mutually exclusive.
    */
   answer?: GuessChip | null | undefined
-  /** Left-click handler that places the active persona (guess or answer). Omit for read-only. */
+  /**
+   * Whether the cell is crossed out (ruled out entirely), drawn as one large grey
+   * X. Takes over the cell, hiding any answer or guesses.
+   */
+  cross?: boolean | undefined
+  /** Left-click handler that places the active tool (guess, answer, or X). Omit for read-only. */
   onPlace?: (() => void) | undefined
   /** Right-click handler that edits the cell's note. Omit to disable notes. */
   onNote?: ((note: string) => void) | undefined
 }
 
 /**
- * One playable square. Left-click places the active persona (when one is picked
- * up) as either a tentative guess or a committed answer; right-click edits the
- * cell's note. A committed answer fills the cell as one large letter; otherwise
- * any guesses are drawn as a small grid of letter chips.
+ * One playable square. Left-click places the active tool (a tentative guess or
+ * committed answer for the picked-up persona, or a crossing-out X); right-click
+ * edits the cell's note. An X or a committed answer fills the cell as one large
+ * letter (X > answer); otherwise any guesses are drawn as a small grid of chips.
  */
-export function Cell({ state, guesses, answer, onPlace, onNote }: CellProps): JSX.Element {
+export function Cell({ state, guesses, answer, cross, onPlace, onNote }: CellProps): JSX.Element {
   const [editing, setEditing] = useState(false)
   const [draft, setDraft] = useState(state.note)
   const textareaRef = useRef<HTMLTextAreaElement | null>(null)
@@ -54,8 +59,10 @@ export function Cell({ state, guesses, answer, onPlace, onNote }: CellProps): JS
   }
 
   const hasNote = state.note.length > 0
-  // A committed answer takes the cell over; only when unanswered do guesses show.
-  const chips = answer ? [] : guesses ?? []
+  // Precedence: an X or a committed answer takes the cell over (X wins); only a
+  // bare cell shows its guesses.
+  const showAnswer = !cross && Boolean(answer)
+  const chips = cross || answer ? [] : guesses ?? []
   // Square-ish layout: √n columns fits the letters into a compact block.
   const cols = chips.length > 0 ? Math.ceil(Math.sqrt(chips.length)) : 1
 
@@ -69,7 +76,12 @@ export function Cell({ state, guesses, answer, onPlace, onNote }: CellProps): JS
         onContextMenu={onNote ? openNote : undefined}
       >
         <span className="cell-glyph">{MARK_GLYPH[state.mark]}</span>
-        {answer && (
+        {cross && (
+          <span className="cell-answer cell-answer-cross" aria-hidden="true">
+            X
+          </span>
+        )}
+        {showAnswer && answer && (
           <span
             className={`cell-answer${answer.isVictim ? ' cell-answer-victim' : ''}`}
             aria-hidden="true"

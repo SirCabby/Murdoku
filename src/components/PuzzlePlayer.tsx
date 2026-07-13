@@ -12,12 +12,13 @@ interface PuzzlePlayerProps {
 }
 
 export function PuzzlePlayer({ puzzleId, onBack, onEdit }: PuzzlePlayerProps): JSX.Element {
-  const { library, toggleGuess, setAnswer } = useLibrary()
+  const { library, toggleGuess, setAnswer, toggleCross } = useLibrary()
 
-  // The persona picked up as the placement tool. Its letter rides the cursor and
-  // clicking a cell places that persona. Cleared on Esc or when the puzzle changes.
+  // The tool picked up for placing. Either a persona (its letter rides the cursor)
+  // or the X tool (`crossActive`) — mutually exclusive. Cleared on Esc or when the
+  // puzzle changes. `mode` only governs how a *persona* lands (guess vs answer).
   const [activeId, setActiveId] = useState<string | null>(null)
-  // Whether a click drops a tentative guess or commits a definitive answer.
+  const [crossActive, setCrossActive] = useState(false)
   const [mode, setMode] = useState<PlaceMode>('guess')
   const cursorRef = useRef<HTMLDivElement | null>(null)
 
@@ -25,34 +26,50 @@ export function PuzzlePlayer({ puzzleId, onBack, onEdit }: PuzzlePlayerProps): J
   // Resolve the tool to a live persona; a stale id (e.g. removed in the editor)
   // reads as nothing picked up.
   const activePersona = activeId ? puzzle?.personas.find((p) => p.id === activeId) ?? null : null
+  // A tool is in hand when a persona is picked up or the X tool is active. That's
+  // when the board is clickable.
+  const holdingTool = crossActive || Boolean(activePersona)
 
-  // Put the tool down when the puzzle changes so a letter never carries across cases.
+  // Pick up a persona (dropping the X tool), or the X tool (dropping the persona).
+  function pickPersona(id: string): void {
+    setActiveId((prev) => (prev === id ? null : id))
+    setCrossActive(false)
+  }
+  function pickCross(): void {
+    setCrossActive((prev) => !prev)
+    setActiveId(null)
+  }
+
+  // Put every tool down when the puzzle changes so nothing carries across cases.
   useEffect(() => {
     setActiveId(null)
+    setCrossActive(false)
   }, [puzzleId])
 
-  // Esc puts the picked-up persona down.
+  // Esc puts the picked-up tool down.
   useEffect(() => {
     function onKey(e: KeyboardEvent): void {
-      if (e.key === 'Escape') setActiveId(null)
+      if (e.key === 'Escape') {
+        setActiveId(null)
+        setCrossActive(false)
+      }
     }
     window.addEventListener('keydown', onKey)
     return () => window.removeEventListener('keydown', onKey)
   }, [])
 
-  // While a persona is picked up, its letter chip follows the cursor. Positioned
-  // via a ref so the constant mousemove never re-renders the board. Keyed on a
-  // boolean so re-placing a guess (which re-renders) doesn't churn the listener.
-  const placing = Boolean(activePersona)
+  // While a tool is in hand, its chip follows the cursor. Positioned via a ref so
+  // the constant mousemove never re-renders the board. Keyed on a boolean so
+  // re-placing (which re-renders) doesn't churn the listener.
   useEffect(() => {
-    if (!placing) return
+    if (!holdingTool) return
     function onMove(e: MouseEvent): void {
       const el = cursorRef.current
       if (el) el.style.transform = `translate(${e.clientX + 12}px, ${e.clientY + 14}px)`
     }
     window.addEventListener('mousemove', onMove)
     return () => window.removeEventListener('mousemove', onMove)
-  }, [placing])
+  }, [holdingTool])
 
   if (!puzzle) {
     return (
@@ -82,20 +99,25 @@ export function PuzzlePlayer({ puzzleId, onBack, onEdit }: PuzzlePlayerProps): J
           <PersonaList
             personas={puzzle.personas}
             activeId={activePersona ? activeId : null}
-            onPick={(id) => setActiveId((prev) => (prev === id ? null : id))}
+            onPick={pickPersona}
             mode={mode}
             onModeChange={setMode}
+            crossActive={crossActive}
+            onPickCross={pickCross}
           />
           <div className="board-scroll">
             <PlayerBoard
               puzzle={puzzle}
-              activePersonaId={activePersona ? activeId : null}
+              active={holdingTool}
               onPlace={
-                activePersona
-                  ? (x, y) =>
-                      mode === 'answer'
-                        ? setAnswer(puzzleId, x, y, activePersona.id)
-                        : toggleGuess(puzzleId, x, y, activePersona.id)
+                holdingTool
+                  ? (x, y) => {
+                      if (crossActive) toggleCross(puzzleId, x, y)
+                      else if (activePersona) {
+                        if (mode === 'answer') setAnswer(puzzleId, x, y, activePersona.id)
+                        else toggleGuess(puzzleId, x, y, activePersona.id)
+                      }
+                    }
                   : undefined
               }
             />
@@ -108,17 +130,26 @@ export function PuzzlePlayer({ puzzleId, onBack, onEdit }: PuzzlePlayerProps): J
         </div>
       )}
 
-      {activePersona && (
+      {holdingTool && (
         <div
           ref={cursorRef}
-          className={`guess-cursor${mode === 'answer' ? ' guess-cursor-answer' : ''}`}
+          className={
+            `guess-cursor` +
+            (crossActive ? ' guess-cursor-cross' : mode === 'answer' ? ' guess-cursor-answer' : '')
+          }
           aria-hidden="true"
         >
-          <span
-            className={`guess-chip${activePersona.role === 'victim' ? ' guess-chip-victim' : ''}`}
-          >
-            {personaLabel(puzzle.personas, activePersona)}
-          </span>
+          {crossActive ? (
+            <span className="guess-chip guess-chip-cross">X</span>
+          ) : (
+            activePersona && (
+              <span
+                className={`guess-chip${activePersona.role === 'victim' ? ' guess-chip-victim' : ''}`}
+              >
+                {personaLabel(puzzle.personas, activePersona)}
+              </span>
+            )
+          )}
         </div>
       )}
     </div>

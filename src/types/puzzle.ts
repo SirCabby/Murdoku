@@ -138,6 +138,15 @@ export interface Puzzle {
    * drops its entry, and removing a persona clears any answer naming it.
    */
   answers: Record<string, string>
+  /**
+   * The player's crossed-out cells: rooms they've ruled out entirely (a big grey
+   * "X"). Keyed by `"x,y"` (always an existing cell); a present key means an X
+   * sits there. Persona-independent — unlike guesses/answers it names no cast
+   * member. An X is mutually exclusive with a cell's guesses and answer: marking
+   * an X clears both, and placing a guess or answer clears the X. Removing a cell
+   * drops its entry.
+   */
+  crosses: Record<string, true>
   createdAt: number
   updatedAt: number
 }
@@ -151,7 +160,7 @@ export interface Folder {
 
 /** The entire persisted library — one blob in localStorage / a save file. */
 export interface Library {
-  version: 9
+  version: 10
   folders: Folder[]
   puzzles: Record<string, Puzzle>
 }

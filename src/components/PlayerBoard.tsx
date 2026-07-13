@@ -10,11 +10,12 @@ import type { GuessChip } from './Cell'
 interface PlayerBoardProps {
   puzzle: Puzzle
   /**
-   * The persona currently picked up as the placement tool, if any. When set the
-   * board reads as "placing" (crosshair cursor) and a cell click fires `onPlace`.
+   * Whether a placement tool is held (a picked-up persona, or the X tool). When
+   * true the board reads as "placing" (crosshair cursor) and a cell click fires
+   * `onPlace`.
    */
-  activePersonaId?: string | null
-  /** Place the active persona in a cell (guess or answer, per the player's mode). Omit for read-only. */
+  active?: boolean | undefined
+  /** Place the active tool in a cell (guess, answer, or X, per the player's mode). Omit for read-only. */
   onPlace?: ((x: number, y: number) => void) | undefined
   /** Edit a cell's note. Omit to disable notes. */
   onNote?: ((x: number, y: number, note: string) => void) | undefined
@@ -30,12 +31,13 @@ const PAD = 1
  * positions, so notches/holes show up as gaps rather than being collapsed away.
  * Objects, windows, and room names are drawn over the cells exactly as the
  * editor's read-only decor does, so the played board matches the edited one.
- * A cell's committed answer fills it with one large persona letter; an unanswered
- * cell instead shows its tentative guesses as a small grid of persona letters.
+ * A crossed-out cell fills it with one large grey X; a committed answer fills it
+ * with one large persona letter; an otherwise-bare cell shows its tentative
+ * guesses as a small grid of persona letters.
  */
 export function PlayerBoard({
   puzzle,
-  activePersonaId,
+  active,
   onPlace,
   onNote,
 }: PlayerBoardProps): JSX.Element | null {
@@ -83,7 +85,7 @@ export function PlayerBoard({
     return id ? chipFor(id) : null
   }
 
-  const placing = Boolean(activePersonaId)
+  const placing = Boolean(active)
 
   return (
     <div className={`board player-board${placing ? ' is-placing' : ''}`} style={style}>
@@ -101,6 +103,7 @@ export function PlayerBoard({
               state={state}
               guesses={chipsFor(key)}
               answer={answerFor(key)}
+              cross={puzzle.crosses[key] === true}
               onPlace={placing && onPlace ? () => onPlace(x, y) : undefined}
               onNote={onNote ? (note) => onNote(x, y, note) : undefined}
             />
