@@ -1,7 +1,7 @@
 import { useEffect, useRef } from 'react'
 import type { CSSProperties, PointerEvent as ReactPointerEvent } from 'react'
 import type { CellObjectKind, ObjectKind, Puzzle } from '../types/puzzle'
-import { boundsOf, parseCellKey } from '../lib/coords'
+import { boundsOf, cellKey, parseCellKey } from '../lib/coords'
 import { parseWallKey, perimeterEdges } from '../lib/walls'
 import {
   OBJECT_LABEL,
@@ -218,10 +218,16 @@ export function ObjectsBoard({
           gridColumn: x - originX + 1,
           gridRow: y - originY + 1,
         }
+        // A window faces into the room. The art defaults to facing up (h) /
+        // right (v), toward the wall's top/right cell; flip it when that cell is
+        // outside the shape (top- and right-perimeter walls), so it always
+        // faces inward. Interior walls keep the default.
+        const inwardCell = orient === 'h' ? cellKey(x, y) : cellKey(x + 1, y)
+        const flip = !(inwardCell in puzzle.cells)
         return (
           <img
             key={`win-${key}`}
-            className={`window-icon window-icon-${orient}`}
+            className={`window-icon window-icon-${orient}${flip ? ' window-icon-flip' : ''}`}
             style={pos}
             src={WINDOW_ICON}
             alt=""

@@ -287,6 +287,9 @@ body {
 }
 .window-icon-h { justify-self: center; align-self: end; transform: translateY(50%); }
 .window-icon-v { justify-self: end; align-self: center; transform: translateX(50%) rotate(90deg); }
+/* Flip to face the opposite room on top- / right-perimeter walls. */
+.window-icon-h.window-icon-flip { transform: translateY(50%) rotate(180deg); }
+.window-icon-v.window-icon-flip { transform: translateX(50%) rotate(-90deg); }
 
 /* ---- Object palette ---- */
 .palette {
