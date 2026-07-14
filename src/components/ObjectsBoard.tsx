@@ -3,8 +3,8 @@ import type { CSSProperties, PointerEvent as ReactPointerEvent } from 'react'
 import type { CellObjectKind, ObjectKind, Puzzle } from '../types/puzzle'
 import { boundsOf, cellKey, parseCellKey } from '../lib/coords'
 import { parseWallKey, perimeterEdges } from '../lib/walls'
-import { OBJECT_LABEL, doorEdges, spanPieces, windowEdges } from '../lib/objects'
-import { spanImageUrl } from '../lib/objectAssets'
+import { OBJECT_LABEL, carpetTileNumber, doorEdges, spanPieces, windowEdges } from '../lib/objects'
+import { spanImageUrl, tileUrl } from '../lib/objectAssets'
 import { DoorDecor, LabelDecor, WindowDecor, objectCellContent } from './BoardDecor'
 
 /** What the palette currently has selected — an object kind, or the eraser. */
@@ -14,9 +14,23 @@ interface ObjectsBoardProps {
   puzzle: Puzzle
   tool: ObjectTool
   onSetObject: (x: number, y: number, kind: CellObjectKind | null) => void
+  /** Lay (`on`) or lift (`!on`) the carpet underlay in a square. */
+  onSetCarpet: (x: number, y: number, on: boolean) => void
+  /** Clear a square entirely — both its object and its carpet — in one step. */
+  onEraseCell: (x: number, y: number) => void
   onSetWindow: (key: string, on: boolean) => void
   onSetDoor: (key: string, on: boolean) => void
 }
+
+/**
+ * The action a cell drag is painting, locked on pointer-down and re-applied to
+ * every cell the pointer enters. Objects and carpets are independent layers, so
+ * the tool decides which one a stroke touches; the eraser clears both.
+ */
+type CellPaint =
+  | { layer: 'object'; kind: CellObjectKind | null }
+  | { layer: 'carpet'; on: boolean }
+  | { layer: 'erase' }
 
 /**
  * Object-placement editor board. When a square tool is selected, each cell is a
@@ -35,11 +49,13 @@ export function ObjectsBoard({
   puzzle,
   tool,
   onSetObject,
+  onSetCarpet,
+  onEraseCell,
   onSetWindow,
   onSetDoor,
 }: ObjectsBoardProps): JSX.Element | null {
-  // Painted value locked on pointer-down, exactly like the shape/walls editors.
-  const paintCell = useRef<{ kind: CellObjectKind | null } | null>(null)
+  // Painted action locked on pointer-down, exactly like the shape/walls editors.
+  const paintCell = useRef<CellPaint | null>(null)
   const paintWindow = useRef<boolean | null>(null)
   const paintDoor = useRef<boolean | null>(null)
 
@@ -78,24 +94,42 @@ export function ObjectsBoard({
   // Either edge tool (window/door) quiets the cells and paints on wall targets.
   const edgeTool = windowTool || doorTool
 
-  /** The square kind this tool would place, or null when it erases/edits edges. */
-  function toolKind(): CellObjectKind | null {
-    if (tool === 'erase' || tool === 'window' || tool === 'door') return null
+  /**
+   * The object-layer kind this tool would place, or null when it isn't an
+   * object-layer tool (carpet has its own layer; erase/window/door place nothing).
+   */
+  function toolObjectKind(): CellObjectKind | null {
+    if (tool === 'erase' || tool === 'carpet' || tool === 'window' || tool === 'door') return null
     return tool
+  }
+
+  /** Apply a locked paint action to one cell (on the initial click and each drag-over). */
+  function applyPaint(paint: CellPaint, x: number, y: number): void {
+    if (paint.layer === 'erase') onEraseCell(x, y)
+    else if (paint.layer === 'carpet') onSetCarpet(x, y, paint.on)
+    else onSetObject(x, y, paint.kind)
   }
 
   function onCellDown(e: ReactPointerEvent, x: number, y: number, key: string): void {
     e.preventDefault()
-    const kind = toolKind()
-    // A repeat click with the same object clears it; otherwise place (or erase).
-    const apply = kind !== null && puzzle.objects[key] === kind ? null : kind
-    paintCell.current = { kind: apply }
-    onSetObject(x, y, apply)
+    let paint: CellPaint
+    if (tool === 'erase') {
+      paint = { layer: 'erase' }
+    } else if (tool === 'carpet') {
+      // A repeat click on a carpeted square lifts the rug; otherwise lay one.
+      paint = { layer: 'carpet', on: !(key in puzzle.carpets) }
+    } else {
+      // A repeat click with the same object clears it (the carpet under it stays).
+      const kind = toolObjectKind()
+      paint = { layer: 'object', kind: kind !== null && puzzle.objects[key] === kind ? null : kind }
+    }
+    paintCell.current = paint
+    applyPaint(paint, x, y)
   }
 
   function onCellEnter(x: number, y: number): void {
     if (!paintCell.current) return
-    onSetObject(x, y, paintCell.current.kind)
+    applyPaint(paintCell.current, x, y)
   }
 
   function onWindowDown(e: ReactPointerEvent, key: string, on: boolean): void {
@@ -132,25 +166,41 @@ export function ObjectsBoard({
         const { cls, img } = kind
           ? objectCellContent(puzzle.objects, x, y, kind, puzzle.walls)
           : { cls: '', img: null }
+        // The rug underlay, drawn behind the object (see `.ocell-carpet`). Dropping
+        // the cell border lets a run of rugs read as one piece.
+        const hasCarpet = key in puzzle.carpets
+        const carpet = hasCarpet ? (
+          <img
+            className="ocell-carpet"
+            src={tileUrl('carpet', carpetTileNumber(puzzle.carpets, x, y, puzzle.walls))}
+            alt=""
+            aria-hidden="true"
+          />
+        ) : null
+        const carpetCls = hasCarpet ? ' ocell-carpeted' : ''
 
         if (edgeTool) {
           return (
-            <div key={key} className={`ocell${cls}`} style={pos}>
+            <div key={key} className={`ocell${cls}${carpetCls}`} style={pos}>
+              {carpet}
               {img}
             </div>
           )
         }
-        const label = kind ? OBJECT_LABEL[kind] : 'empty'
+        const label = [kind ? OBJECT_LABEL[kind] : null, hasCarpet ? 'carpet' : null]
+          .filter(Boolean)
+          .join(' on ') || 'empty'
         return (
           <button
             key={key}
             type="button"
-            className={`ocell ocell-btn${cls}`}
+            className={`ocell ocell-btn${cls}${carpetCls}`}
             style={pos}
             aria-label={`Cell ${x},${y} (${label})`}
             onPointerDown={(e) => onCellDown(e, x, y, key)}
             onPointerEnter={() => onCellEnter(x, y)}
           >
+            {carpet}
             {img}
           </button>
         )

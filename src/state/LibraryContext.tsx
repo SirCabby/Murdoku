@@ -20,9 +20,11 @@ import {
 import { pruneWalls, setWall as setWallOp } from '../lib/walls'
 import {
   isPlacementBlocked,
+  pruneCarpets,
   pruneDoors,
   pruneObjects,
   pruneWindows,
+  setCarpet as setCarpetOp,
   setDoor as setDoorOp,
   setObject as setObjectOp,
   setWindow as setWindowOp,
@@ -91,6 +93,10 @@ export interface LibraryApi {
   clearWalls: (puzzleId: string) => void
   // Objects (furnishings)
   setObject: (puzzleId: string, x: number, y: number, kind: CellObjectKind | null) => void
+  /** Lay (`on`) or lift (`!on`) the carpet underlay in a square — its own layer, so it can sit under an object. */
+  setCarpet: (puzzleId: string, x: number, y: number, on: boolean) => void
+  /** Clear a square's furnishings — both its object and its carpet — in one step. */
+  eraseCell: (puzzleId: string, x: number, y: number) => void
   setWindow: (puzzleId: string, key: string, on: boolean) => void
   /** Add or remove a door on an edge — legal only on an interior wall. */
   setDoor: (puzzleId: string, key: string, on: boolean) => void
@@ -250,6 +256,7 @@ export function LibraryProvider({ children }: { children: ReactNode }): JSX.Elem
           cells: {},
           walls: {},
           objects: {},
+          carpets: {},
           windows: {},
           doors: {},
           labels: [],
@@ -305,6 +312,7 @@ export function LibraryProvider({ children }: { children: ReactNode }): JSX.Elem
           // cell's object with it, and either edit reshapes which edges qualify
           // as window mounts.
           const objects = pruneObjects(p.objects, cells)
+          const carpets = pruneCarpets(p.carpets, cells)
           const windows = pruneWindows(p.windows, cells, walls)
           const doors = pruneDoors(p.doors, cells, walls)
           // Removing a cell also drops any guesses, answer, X, or answer-key
@@ -313,7 +321,7 @@ export function LibraryProvider({ children }: { children: ReactNode }): JSX.Elem
           const answers = pruneAnswers(p.answers, cells)
           const crosses = pruneCrosses(p.crosses, cells)
           const solution = pruneSolution(p.solution, cells)
-          return { ...p, cells, walls, objects, windows, doors, guesses, answers, crosses, solution }
+          return { ...p, cells, walls, objects, carpets, windows, doors, guesses, answers, crosses, solution }
         })
       },
 
@@ -326,6 +334,7 @@ export function LibraryProvider({ children }: { children: ReactNode }): JSX.Elem
             cells,
             walls,
             objects: pruneObjects(p.objects, cells),
+            carpets: pruneCarpets(p.carpets, cells),
             windows: pruneWindows(p.windows, cells, walls),
             doors: pruneDoors(p.doors, cells, walls),
             guesses: pruneGuesses(p.guesses, cells),
@@ -342,6 +351,7 @@ export function LibraryProvider({ children }: { children: ReactNode }): JSX.Elem
           cells: {},
           walls: {},
           objects: {},
+          carpets: {},
           windows: {},
           doors: {},
           // Labels are anchored in lattice space, so an empty shape leaves them
@@ -397,6 +407,30 @@ export function LibraryProvider({ children }: { children: ReactNode }): JSX.Elem
         })
       },
 
+      setCarpet(puzzleId, x, y, on) {
+        patchPuzzle(puzzleId, (p) => {
+          const key = cellKey(x, y)
+          if (!(key in p.cells)) return p
+          // A carpet is a floor underlay — never blocking — so it leaves the answer
+          // key alone; only the object it sits under can rule a cell unplaceable.
+          const carpets = setCarpetOp(p.carpets, key, on)
+          return carpets === p.carpets ? p : { ...p, carpets }
+        })
+      },
+
+      eraseCell(puzzleId, x, y) {
+        patchPuzzle(puzzleId, (p) => {
+          const key = cellKey(x, y)
+          if (!(key in p.cells)) return p
+          // Empty the square: drop both its object and its carpet at once. Removing
+          // a furnishing only ever *unblocks* a cell, so the answer key is untouched.
+          const objects = setObjectOp(p.objects, key, null)
+          const carpets = setCarpetOp(p.carpets, key, false)
+          if (objects === p.objects && carpets === p.carpets) return p
+          return { ...p, objects, carpets }
+        })
+      },
+
       setWindow(puzzleId, key, on) {
         patchPuzzle(puzzleId, (p) => {
           const windows = setWindowOp(p.windows, key, on)
@@ -414,10 +448,11 @@ export function LibraryProvider({ children }: { children: ReactNode }): JSX.Elem
       clearObjects(puzzleId) {
         patchPuzzle(puzzleId, (p) =>
           Object.keys(p.objects).length === 0 &&
+          Object.keys(p.carpets).length === 0 &&
           Object.keys(p.windows).length === 0 &&
           Object.keys(p.doors).length === 0
             ? p
-            : { ...p, objects: {}, windows: {}, doors: {} }
+            : { ...p, objects: {}, carpets: {}, windows: {}, doors: {} }
         )
       },
 

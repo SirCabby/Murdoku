@@ -10,10 +10,11 @@ import { newId } from './id'
 // will additionally sync this blob to the connected save file (see lib/gst.ts);
 // that hook is intentionally not wired up yet.
 
-const STORAGE_KEY = 'murdoku.library.v17'
+const STORAGE_KEY = 'murdoku.library.v18'
 // Older blobs still sitting in some users' storage, newest first. Each is
 // upgraded forward by `coerceLibrary` and then removed once read.
 const LEGACY_KEYS = [
+  'murdoku.library.v17',
   'murdoku.library.v16',
   'murdoku.library.v15',
   'murdoku.library.v14',
@@ -32,7 +33,7 @@ const LEGACY_KEYS = [
 ]
 
 export function emptyLibrary(): Library {
-  return { version: 17, folders: [], puzzles: {} }
+  return { version: 18, folders: [], puzzles: {} }
 }
 
 export function loadLibrary(): Library {
@@ -76,35 +77,37 @@ export function parseLibrary(text: string): Library {
 
 /**
  * Validate an already-parsed value and normalize it to the current Library
- * shape, or return null if it isn't one. Accepts the current version (17) and
+ * shape, or return null if it isn't one. Accepts the current version (18) and
  * upgrades older blobs forward one step at a time: v2 (no walls) → v3 (no
  * objects) → v4 (no room labels) → v5 (labels mid-cell) → v6 (labels snapped to
  * bottom walls) → v7 (no personas) → v8 (no persona guesses) → v9 (no persona
  * answers) → v10 (no crossed-out cells) → v11 (no murderer accusation) → v12 (no
  * answer key) → v13 (no hints) → v14 (no answer-key murderer) → v15 (no solved
- * badge) → v16 (no room clues) → v17 (no doors). Validation is shallow — the same trust level the
- * app has always applied to its own localStorage blob.
+ * badge) → v16 (no room clues) → v17 (no doors) → v18 (carpet still in the objects
+ * map, no separate carpets layer). Validation is shallow — the same trust level
+ * the app has always applied to its own localStorage blob.
  */
 function coerceLibrary(value: unknown): Library | null {
   if (!value || typeof value !== 'object') return null
   const v = value as { version?: unknown; folders?: unknown }
   if (!Array.isArray(v.folders)) return null
-  if (v.version === 17) return value as Library
-  if (v.version === 16) return upgradeV16(value as LibraryV16)
-  if (v.version === 15) return upgradeV16(upgradeV15(value as LibraryV15))
-  if (v.version === 14) return upgradeV16(upgradeV15(upgradeV14(value as LibraryV14)))
-  if (v.version === 13) return upgradeV16(upgradeV15(upgradeV14(upgradeV13(value as LibraryV13))))
-  if (v.version === 12) return upgradeV16(upgradeV15(upgradeV14(upgradeV13(upgradeV12(value as LibraryV12)))))
-  if (v.version === 11) return upgradeV16(upgradeV15(upgradeV14(upgradeV13(upgradeV12(upgradeV11(value as LibraryV11))))))
-  if (v.version === 10) return upgradeV16(upgradeV15(upgradeV14(upgradeV13(upgradeV12(upgradeV11(upgradeV10(value as LibraryV10)))))))
-  if (v.version === 9) return upgradeV16(upgradeV15(upgradeV14(upgradeV13(upgradeV12(upgradeV11(upgradeV10(upgradeV9(value as LibraryV9))))))))
-  if (v.version === 8) return upgradeV16(upgradeV15(upgradeV14(upgradeV13(upgradeV12(upgradeV11(upgradeV10(upgradeV9(upgradeV8(value as LibraryV8)))))))))
-  if (v.version === 7) return upgradeV16(upgradeV15(upgradeV14(upgradeV13(upgradeV12(upgradeV11(upgradeV10(upgradeV9(upgradeV8(upgradeV7(value as LibraryV7))))))))))
-  if (v.version === 6) return upgradeV16(upgradeV15(upgradeV14(upgradeV13(upgradeV12(upgradeV11(upgradeV10(upgradeV9(upgradeV8(upgradeV7(upgradeV6(value as LibraryV6)))))))))))
-  if (v.version === 5) return upgradeV16(upgradeV15(upgradeV14(upgradeV13(upgradeV12(upgradeV11(upgradeV10(upgradeV9(upgradeV8(upgradeV7(upgradeV6(upgradeV5(value as LibraryV5))))))))))))
-  if (v.version === 4) return upgradeV16(upgradeV15(upgradeV14(upgradeV13(upgradeV12(upgradeV11(upgradeV10(upgradeV9(upgradeV8(upgradeV7(upgradeV6(upgradeV5(upgradeV4(value as LibraryV4)))))))))))))
-  if (v.version === 3) return upgradeV16(upgradeV15(upgradeV14(upgradeV13(upgradeV12(upgradeV11(upgradeV10(upgradeV9(upgradeV8(upgradeV7(upgradeV6(upgradeV5(upgradeV4(upgradeV3(value as LibraryV3))))))))))))))
-  if (v.version === 2) return upgradeV16(upgradeV15(upgradeV14(upgradeV13(upgradeV12(upgradeV11(upgradeV10(upgradeV9(upgradeV8(upgradeV7(upgradeV6(upgradeV5(upgradeV4(upgradeV3(upgradeV2(value as LibraryV2)))))))))))))))
+  if (v.version === 18) return value as Library
+  if (v.version === 17) return upgradeV17(value as LibraryV17)
+  if (v.version === 16) return upgradeV17(upgradeV16(value as LibraryV16))
+  if (v.version === 15) return upgradeV17(upgradeV16(upgradeV15(value as LibraryV15)))
+  if (v.version === 14) return upgradeV17(upgradeV16(upgradeV15(upgradeV14(value as LibraryV14))))
+  if (v.version === 13) return upgradeV17(upgradeV16(upgradeV15(upgradeV14(upgradeV13(value as LibraryV13)))))
+  if (v.version === 12) return upgradeV17(upgradeV16(upgradeV15(upgradeV14(upgradeV13(upgradeV12(value as LibraryV12))))))
+  if (v.version === 11) return upgradeV17(upgradeV16(upgradeV15(upgradeV14(upgradeV13(upgradeV12(upgradeV11(value as LibraryV11)))))))
+  if (v.version === 10) return upgradeV17(upgradeV16(upgradeV15(upgradeV14(upgradeV13(upgradeV12(upgradeV11(upgradeV10(value as LibraryV10))))))))
+  if (v.version === 9) return upgradeV17(upgradeV16(upgradeV15(upgradeV14(upgradeV13(upgradeV12(upgradeV11(upgradeV10(upgradeV9(value as LibraryV9)))))))))
+  if (v.version === 8) return upgradeV17(upgradeV16(upgradeV15(upgradeV14(upgradeV13(upgradeV12(upgradeV11(upgradeV10(upgradeV9(upgradeV8(value as LibraryV8))))))))))
+  if (v.version === 7) return upgradeV17(upgradeV16(upgradeV15(upgradeV14(upgradeV13(upgradeV12(upgradeV11(upgradeV10(upgradeV9(upgradeV8(upgradeV7(value as LibraryV7)))))))))))
+  if (v.version === 6) return upgradeV17(upgradeV16(upgradeV15(upgradeV14(upgradeV13(upgradeV12(upgradeV11(upgradeV10(upgradeV9(upgradeV8(upgradeV7(upgradeV6(value as LibraryV6))))))))))))
+  if (v.version === 5) return upgradeV17(upgradeV16(upgradeV15(upgradeV14(upgradeV13(upgradeV12(upgradeV11(upgradeV10(upgradeV9(upgradeV8(upgradeV7(upgradeV6(upgradeV5(value as LibraryV5)))))))))))))
+  if (v.version === 4) return upgradeV17(upgradeV16(upgradeV15(upgradeV14(upgradeV13(upgradeV12(upgradeV11(upgradeV10(upgradeV9(upgradeV8(upgradeV7(upgradeV6(upgradeV5(upgradeV4(value as LibraryV4))))))))))))))
+  if (v.version === 3) return upgradeV17(upgradeV16(upgradeV15(upgradeV14(upgradeV13(upgradeV12(upgradeV11(upgradeV10(upgradeV9(upgradeV8(upgradeV7(upgradeV6(upgradeV5(upgradeV4(upgradeV3(value as LibraryV3)))))))))))))))
+  if (v.version === 2) return upgradeV17(upgradeV16(upgradeV15(upgradeV14(upgradeV13(upgradeV12(upgradeV11(upgradeV10(upgradeV9(upgradeV8(upgradeV7(upgradeV6(upgradeV5(upgradeV4(upgradeV3(upgradeV2(value as LibraryV2))))))))))))))))
   return null
 }
 
@@ -289,12 +292,34 @@ function upgradeV15(old: LibraryV15): LibraryV16 {
  * authoring content that predates this version, so every migrated puzzle starts
  * with none — the author places them in the editor's Objects tab.
  */
-function upgradeV16(old: LibraryV16): Library {
-  const puzzles: Record<string, Puzzle> = {}
+function upgradeV16(old: LibraryV16): LibraryV17 {
+  const puzzles: Record<string, PuzzleV17> = {}
   for (const [id, p] of Object.entries(old.puzzles)) {
     puzzles[id] = { ...p, doors: {} }
   }
   return { version: 17, folders: old.folders, puzzles }
+}
+
+/**
+ * Split carpets out of the `objects` map into their own `carpets` layer, taking
+ * v17 to v18. Before this version a carpet was just another object kind, so at
+ * most one furnishing (carpet OR something else) fit per square; now a carpet is
+ * a floor underlay an object can sit on top of. Every `objects[key] === 'carpet'`
+ * entry moves to `carpets[key] = true` and is dropped from `objects`, so existing
+ * rugs render exactly as before with the square now free to hold an object too.
+ */
+function upgradeV17(old: LibraryV17): Library {
+  const puzzles: Record<string, Puzzle> = {}
+  for (const [id, p] of Object.entries(old.puzzles)) {
+    const objects: Record<string, CellObjectKind> = {}
+    const carpets: Record<string, true> = {}
+    for (const [key, kind] of Object.entries(p.objects)) {
+      if (kind === 'carpet') carpets[key] = true
+      else objects[key] = kind
+    }
+    puzzles[id] = { ...p, objects, carpets }
+  }
+  return { version: 18, folders: old.folders, puzzles }
 }
 
 /** A pre-walls (version 2) puzzle, as it still sits in some users' storage. */
@@ -468,6 +493,20 @@ interface LibraryV16 {
   puzzles: Record<string, PuzzleV16>
 }
 
+/**
+ * A version-17 puzzle — has doors, but carpets still live inside the `objects`
+ * map (no separate `carpets` layer, so nothing could sit on top of a rug).
+ */
+interface PuzzleV17 extends PuzzleV16 {
+  doors: Record<string, true>
+}
+
+interface LibraryV17 {
+  version: 17
+  folders: Folder[]
+  puzzles: Record<string, PuzzleV17>
+}
+
 export function saveLibrary(library: Library): void {
   try {
     localStorage.setItem(STORAGE_KEY, JSON.stringify(library))
@@ -502,18 +541,25 @@ function seedLibrary(): Library {
     [wallKey(1, 1, 'h')]: true,
   }
 
-  // A two-cell bed in the fenced-off room, a 2×2 carpet and a two-wide table
-  // that show off merging, and a plant out in the bulge.
+  // A two-cell bed in the fenced-off room, a two-wide table that shows off
+  // merging, a plant out in the bulge, and a chair standing on the rug below to
+  // show an object placed on top of a carpet.
   const objects: Record<string, CellObjectKind> = {
     [cellKey(0, 0)]: 'bed',
     [cellKey(1, 0)]: 'bed',
-    [cellKey(2, 2)]: 'carpet',
-    [cellKey(3, 2)]: 'carpet',
-    [cellKey(2, 3)]: 'carpet',
-    [cellKey(3, 3)]: 'carpet',
+    [cellKey(3, 2)]: 'chair',
     [cellKey(0, 3)]: 'table',
     [cellKey(1, 3)]: 'table',
     [cellKey(4, 2)]: 'plant',
+  }
+
+  // A 2×2 rug in the parlor, its own floor layer (so the chair above can sit on
+  // it); the four squares autotile into one piece.
+  const carpets: Record<string, true> = {
+    [cellKey(2, 2)]: true,
+    [cellKey(3, 2)]: true,
+    [cellKey(2, 3)]: true,
+    [cellKey(3, 3)]: true,
   }
 
   // A window on the top perimeter of the fenced room.
@@ -609,7 +655,7 @@ function seedLibrary(): Library {
   const folderId = newId()
 
   return {
-    version: 17,
+    version: 18,
     folders: [{ id: folderId, name: 'My Cases', puzzleIds: [puzzleId] }],
     puzzles: {
       [puzzleId]: {
@@ -618,6 +664,7 @@ function seedLibrary(): Library {
         cells,
         walls,
         objects,
+        carpets,
         windows,
         doors,
         labels,

@@ -150,9 +150,19 @@ export interface Puzzle {
   walls: Record<string, true>
   /**
    * Furnishings placed inside squares — at most one per square. Keyed by `"x,y"`
-   * (always an existing cell); removing a cell prunes its object.
+   * (always an existing cell); removing a cell prunes its object. A carpet is not
+   * stored here — it's a floor underlay in its own `carpets` map, so an object can
+   * sit *on top of* a carpet in the same square.
    */
   objects: Record<string, CellObjectKind>
+  /**
+   * Carpets — the one floor-covering furnishing, kept in its own boolean layer
+   * (keyed by `"x,y"`, presence means a rug covers that square) rather than in
+   * `objects`, so a carpet and an object can share a square: the object is drawn
+   * on top of the rug. Carpets autotile among themselves like tables do (walls
+   * fence separate rugs apart). Removing a cell prunes its carpet.
+   */
+  carpets: Record<string, true>
   /**
    * Windows, which sit on walls rather than in squares. Keyed by an edge string
    * in the walls key format (`lib/walls.ts`). An edge qualifies as a window
@@ -276,7 +286,7 @@ export interface Folder {
 
 /** The entire persisted library — one blob in localStorage / a save file. */
 export interface Library {
-  version: 17
+  version: 18
   folders: Folder[]
   puzzles: Record<string, Puzzle>
 }

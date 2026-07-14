@@ -2,7 +2,7 @@ import type { CSSProperties } from 'react'
 import type { CellObjectKind, Puzzle } from '../types/puzzle'
 import { cellKey, parseCellKey } from '../lib/coords'
 import { parseWallKey } from '../lib/walls'
-import { isSpanKind, isTileMergeKind, spanPieces, tileNumberFor } from '../lib/objects'
+import { carpetTileNumber, isSpanKind, isTileMergeKind, spanPieces, tileNumberFor } from '../lib/objects'
 import { baseIconUrl, spanImageUrl, tileUrl } from '../lib/objectAssets'
 
 // Read-only overlays so every editor mode can show the whole puzzle — objects,
@@ -61,13 +61,28 @@ export function objectCellContent(
 }
 
 /**
- * Read-only object artwork (icons + autotiled carpets/tables + bed dominoes)
- * drawn over a board's cells for reference. Uses the `ocell-ghost` variant so
- * there's no floor tile and clicks fall through to the board's own cells.
+ * Read-only object artwork (autotiled carpet underlay + icons + autotiled tables
+ * + bed dominoes) drawn over a board's cells for reference. Uses the `ocell-ghost`
+ * variant so there's no floor tile and clicks fall through to the board's own
+ * cells. Carpets are emitted first so an object in the same square sits on top.
  */
 export function ObjectDecor({ puzzle, originX, originY }: DecorProps): JSX.Element {
   return (
     <>
+      {Object.keys(puzzle.carpets).map((key) => {
+        const { x, y } = parseCellKey(key)
+        const tile = carpetTileNumber(puzzle.carpets, x, y, puzzle.walls)
+        const pos: CSSProperties = {
+          gridColumn: x - originX + 1,
+          gridRow: y - originY + 1,
+        }
+        return (
+          <div key={`carpet-${key}`} className="ocell ocell-ghost ocell-tile" style={pos} aria-hidden="true">
+            <img className="obj-fill" src={tileUrl('carpet', tile)} alt="" />
+          </div>
+        )
+      })}
+
       {Object.entries(puzzle.objects).map(([key, kind]) => {
         const { x, y } = parseCellKey(key)
         const { cls, img } = objectCellContent(puzzle.objects, x, y, kind, puzzle.walls)

@@ -435,10 +435,23 @@ body {
    is ~187px, a register only ~26px), so `object-fit: contain` renders them all
    at a consistent scale instead of leaving small icons undersized. */
 .obj-fit {
+  position: relative; z-index: 1;
   width: 100%; height: 100%; object-fit: contain;
   pointer-events: none; filter: drop-shadow(0 0 0.6px rgba(20, 20, 22, 0.55));
 }
-.obj-fill { display: block; width: 100%; height: 100%; pointer-events: none; }
+.obj-fill { position: relative; z-index: 1; display: block; width: 100%; height: 100%; pointer-events: none; }
+
+/* A carpet laid under a square's object: the autotiled rug fills the cell behind
+   the object art. Absolutely positioned so it layers beneath the object no matter
+   the object's own padding (z-index 0 vs. the object's 1); the object stays
+   centered with its usual inset. A carpet may also sit on its own. */
+.ocell-carpet {
+  position: absolute; inset: 0; z-index: 0;
+  width: 100%; height: 100%; pointer-events: none;
+}
+/* Drop the grid border on a carpeted editor cell so adjoining rugs read as one
+   piece, the way a run of `ocell-tile` carpets did before. */
+.ocell-carpeted { border-color: transparent; }
 
 /* Carpet/table tiles abut with no border or padding so a run reads as one piece;
    the floor still shows through the tile art's transparent parts. */

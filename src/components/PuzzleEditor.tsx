@@ -33,6 +33,8 @@ export function PuzzleEditor({ puzzleId, onDone }: PuzzleEditorProps): JSX.Eleme
     setWall,
     clearWalls,
     setObject,
+    setCarpet,
+    eraseCell,
     setWindow,
     setDoor,
     clearObjects,
@@ -74,7 +76,9 @@ export function PuzzleEditor({ puzzleId, onDone }: PuzzleEditorProps): JSX.Eleme
 
   const cellCount = Object.keys(puzzle.cells).length
   const wallCount = Object.keys(puzzle.walls).length
-  const objectCount = Object.keys(puzzle.objects).length
+  // Carpets are furnishings too, so they count toward the "objects" tally and the
+  // clear affordance — a square holding a chair on a rug reads as two pieces.
+  const objectCount = Object.keys(puzzle.objects).length + Object.keys(puzzle.carpets).length
   const windowCount = Object.keys(puzzle.windows).length
   const doorCount = Object.keys(puzzle.doors).length
   const labelCount = puzzle.labels.length
@@ -332,7 +336,9 @@ export function PuzzleEditor({ puzzleId, onDone }: PuzzleEditorProps): JSX.Eleme
                   ? 'Click a wall — an interior wall or the outer edge — to add a window; click it again to remove it. Windows can only sit on walls.'
                   : tool === 'door'
                     ? 'Click an interior wall to add a door; click it again to remove it. Doors join two rooms, so they only sit on interior walls (raise the wall in Walls mode first).'
-                    : 'Pick an object, then click or drag across squares to place it. Only one object fits per square; click a matching square again to clear it.'}
+                    : tool === 'carpet'
+                      ? 'Click or drag across squares to lay a rug; click a carpeted square again to lift it. A carpet is a floor underlay, so you can place another object on top of it.'
+                      : 'Pick an object, then click or drag across squares to place it. One object fits per square (on top of any rug there); click a matching square again to clear it. Erase clears the whole square.'}
               </p>
 
               <div className="board-scroll">
@@ -340,6 +346,8 @@ export function PuzzleEditor({ puzzleId, onDone }: PuzzleEditorProps): JSX.Eleme
                   puzzle={puzzle}
                   tool={tool}
                   onSetObject={(x, y, kind) => setObject(puzzleId, x, y, kind)}
+                  onSetCarpet={(x, y, on) => setCarpet(puzzleId, x, y, on)}
+                  onEraseCell={(x, y) => eraseCell(puzzleId, x, y)}
                   onSetWindow={(key, on) => setWindow(puzzleId, key, on)}
                   onSetDoor={(key, on) => setDoor(puzzleId, key, on)}
                 />

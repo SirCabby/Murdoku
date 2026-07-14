@@ -132,18 +132,23 @@ export function isPlacementBlocked(
 
 // ---- Merging ----------------------------------------------------------------
 // Some furnishings fuse with same-kind neighbours so a run of them reads as one
-// piece. Carpet and table use the puzzle-authoring tile art from murdoku.com
-// (a 49-piece autotile set). The "span" kinds (bed/towel/car) are different: on
-// the source site each is a two-cell "domino" drawn as one image, never
-// autotiled — so adjacent same-kind squares are paired into pieces and each pair
-// (or leftover single) renders as one spanning image (see `spanPieces`).
+// piece. Table (in the `objects` map) and carpet (its own `carpets` layer) use
+// the puzzle-authoring tile art from murdoku.com (a 49-piece autotile set). The
+// "span" kinds (bed/towel/car) are different: on the source site each is a
+// two-cell "domino" drawn as one image, never autotiled — so adjacent same-kind
+// squares are paired into pieces and each pair (or leftover single) renders as
+// one spanning image (see `spanPieces`).
 //
 // A wall fences neighbours apart: two same-kind squares separated by a wall are
 // distinct furnishings in distinct rooms, so they must not fuse. Every fuse test
 // therefore gates on `wallBetween` as well as same-kind adjacency.
 
-/** Kinds that autotile with the carpet/table tile sets. */
-export const TILE_MERGE_KINDS = new Set<CellObjectKind>(['carpet', 'table'])
+/**
+ * Kinds *within the `objects` map* that autotile. Only the table lives there;
+ * the carpet autotiles too but sits in its own boolean `carpets` layer (so an
+ * object can share its square), so it's handled by `carpetTileNumber`, not here.
+ */
+export const TILE_MERGE_KINDS = new Set<CellObjectKind>(['table'])
 
 export function isTileMergeKind(kind: CellObjectKind): boolean {
   return TILE_MERGE_KINDS.has(kind)
@@ -249,24 +254,22 @@ export function spanPieces(
 const LONE_CARPET_TILE = 1
 
 /**
- * The autotile file number (1–49) for a carpet/table cell given its same-kind
- * neighbours, or `null` when the piece is isolated *and* uses a standalone base
- * icon instead of a tile (tables do). An isolated carpet uses the closed-rug
- * tile; the blob table's own entry for the empty signature is an edge fragment,
- * not a standalone piece, so it is special-cased.
+ * Core blob-autotile: the file number (1–49) for a cell belonging to a tile group
+ * defined by `member(x, y)`, or `loneTile` when the cell has no same-group
+ * neighbour at all. Two squares fuse only when both are members *and* no wall
+ * fences them apart; a corner fills only when its whole 2×2 quadrant is member and
+ * wall-free, so a run never bleeds across a wall. Shared by tables and carpets,
+ * which differ only in where their membership lives and what a lone cell shows.
  */
-export function tileNumberFor(
-  objects: Record<string, CellObjectKind>,
+function tileNumberForGroup(
+  member: (x: number, y: number) => boolean,
+  walls: Record<string, true>,
   x: number,
   y: number,
-  kind: CellObjectKind,
-  walls: Record<string, true>
+  loneTile: number | null
 ): number | null {
-  // Two squares fuse only when they hold the same kind *and* no wall fences them
-  // apart. Cardinal links gate on the shared edge; a corner fills only when the
-  // whole 2×2 quadrant is wall-free, so a rug/table never bleeds across a wall.
   const linked = (ax: number, ay: number, bx: number, by: number): boolean =>
-    objects[cellKey(bx, by)] === kind && !wallBetween(walls, ax, ay, bx, by)
+    member(bx, by) && !wallBetween(walls, ax, ay, bx, by)
   const n = linked(x, y, x, y - 1)
   const e = linked(x, y, x + 1, y)
   const s = linked(x, y, x, y + 1)
@@ -278,8 +281,44 @@ export function tileNumberFor(
   const idx =
     (n ? 1 : 0) + (ne ? 2 : 0) + (e ? 4 : 0) + (se ? 8 : 0) +
     (s ? 16 : 0) + (sw ? 32 : 0) + (w ? 64 : 0) + (nw ? 128 : 0)
-  if (idx === 0) return kind === 'table' ? null : LONE_CARPET_TILE
+  if (idx === 0) return loneTile
   return (BLOB_FRAME[idx] ?? 47) + 1
+}
+
+/**
+ * The autotile file number (1–49) for a table cell given its same-kind
+ * neighbours, or `null` when the table is isolated — a lone table uses its
+ * standalone base icon, since the blob's empty-signature entry is an edge
+ * fragment rather than a whole piece.
+ */
+export function tileNumberFor(
+  objects: Record<string, CellObjectKind>,
+  x: number,
+  y: number,
+  kind: CellObjectKind,
+  walls: Record<string, true>
+): number | null {
+  return tileNumberForGroup((cx, cy) => objects[cellKey(cx, cy)] === kind, walls, x, y, null)
+}
+
+/**
+ * The autotile file number (1–49) for a carpet cell given its carpet neighbours.
+ * Carpet membership is a boolean layer (`carpets`), so a rug can lie under an
+ * object; an isolated carpet uses the closed-rug tile rather than a base icon.
+ */
+export function carpetTileNumber(
+  carpets: Record<string, true>,
+  x: number,
+  y: number,
+  walls: Record<string, true>
+): number {
+  return tileNumberForGroup(
+    (cx, cy) => carpets[cellKey(cx, cy)] === true,
+    walls,
+    x,
+    y,
+    LONE_CARPET_TILE
+  ) as number
 }
 
 /**
@@ -313,6 +352,39 @@ export function pruneObjects(
     else changed = true
   }
   return changed ? next : objects
+}
+
+/**
+ * Lay a carpet (`on`) or lift it (`!on`) in a square. Idempotent — returns the
+ * same map when nothing changes. Callers guard that the cell exists.
+ */
+export function setCarpet(
+  carpets: Record<string, true>,
+  key: string,
+  on: boolean
+): Record<string, true> {
+  if (on) {
+    if (carpets[key]) return carpets
+    return { ...carpets, [key]: true }
+  }
+  if (!(key in carpets)) return carpets
+  const next = { ...carpets }
+  delete next[key]
+  return next
+}
+
+/** Drops any carpet whose square no longer exists. Same map if unchanged. */
+export function pruneCarpets(
+  carpets: Record<string, true>,
+  cells: Record<string, CellState>
+): Record<string, true> {
+  const next: Record<string, true> = {}
+  let changed = false
+  for (const key of Object.keys(carpets)) {
+    if (key in cells) next[key] = true
+    else changed = true
+  }
+  return changed ? next : carpets
 }
 
 /**
