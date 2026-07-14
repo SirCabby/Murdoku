@@ -340,6 +340,7 @@ export function PuzzlePlayer({ puzzleId, onBack, onEdit }: PuzzlePlayerProps): J
                 summaries={summaries}
                 highlightId={highlight && activePersona ? activeId : null}
                 errorKeys={errorKeys ?? undefined}
+                objectCaptions
                 onPlace={
                   holdingTool
                     ? (x, y) => {
@@ -442,6 +443,7 @@ export function PuzzlePlayer({ puzzleId, onBack, onEdit }: PuzzlePlayerProps): J
                     answers={puzzle.solution}
                     guesses={NO_GUESSES}
                     crosses={solutionCrosses(puzzle.solution, puzzle.cells, puzzle.objects)}
+                    objectCaptions
                   />
                 </div>
                 <p className="answer-key-murderer">

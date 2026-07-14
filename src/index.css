@@ -360,6 +360,19 @@ body {
 /* The X tool's cursor chip is greyed, matching the crossed-out cell. */
 .guess-chip-cross { background: var(--panel-2); color: var(--muted); border: 1px solid var(--line-strong); }
 
+/* Instant hover caption naming a placed furnishing in play. Like the cursor chip
+   it's a viewport-fixed element positioned straight from the pointer, so it shows
+   with no native-tooltip delay and isn't clipped by the scrolling board. Hidden
+   (opacity 0, no transition) until a furnished cell is hovered. */
+.obj-caption {
+  position: fixed; top: 0; left: 0; z-index: 40; pointer-events: none; opacity: 0;
+  padding: 3px 8px; border-radius: 6px; white-space: nowrap;
+  font-size: 12px; font-weight: 600; letter-spacing: 0.02em; color: var(--text);
+  background: color-mix(in srgb, var(--panel) 94%, transparent);
+  border: 1px solid var(--line-strong); box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
+}
+.obj-caption.is-visible { opacity: 1; }
+
 /* ---- Walls (room boundaries) ---- */
 /* Player: read-only lines straddling the gridline between two cells. */
 .wall-line { z-index: 5; pointer-events: none; background: var(--wall); border-radius: 2px; }

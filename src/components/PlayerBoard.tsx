@@ -1,9 +1,10 @@
-import type { CSSProperties } from 'react'
+import { useRef } from 'react'
+import type { CSSProperties, MouseEvent as ReactMouseEvent } from 'react'
 import type { Persona, Puzzle } from '../types/puzzle'
 import { boundsOf, parseCellKey } from '../lib/coords'
 import { parseWallKey, perimeterEdges } from '../lib/walls'
 import { personaLabel, suspectsOf, victimOf } from '../lib/personas'
-import { isPlacementBlocked } from '../lib/objects'
+import { OBJECT_LABEL, isPlacementBlocked } from '../lib/objects'
 import { DoorDecor, ObjectDecor, WindowDecor } from './BoardDecor'
 import { Cell } from './Cell'
 import type { GuessChip } from './Cell'
@@ -45,6 +46,16 @@ interface PlayerBoardProps {
    * it. Omit for no error highlight.
    */
   errorKeys?: ReadonlySet<string> | undefined
+  /**
+   * Show an instant hover caption naming the furnishing in any square that holds
+   * one (e.g. "Cash register"). On for the real play boards so a solver can hover
+   * to learn what a piece of art is; off in the editor's read-only previews. The
+   * caption is a viewport-fixed chip that follows the pointer (like the picked-up
+   * tool cursor), so it appears with no native-tooltip delay and isn't clipped by
+   * the scrolling board; hover lands on the interactive cell beneath the
+   * click-through object art, so it never intercepts a placement click.
+   */
+  objectCaptions?: boolean | undefined
   /** Place the active tool in a cell (guess, answer, or X, per the player's mode). Omit for read-only. */
   onPlace?: ((x: number, y: number) => void) | undefined
 }
@@ -73,8 +84,29 @@ export function PlayerBoard({
   guesses: guessesProp,
   crosses: crossesProp,
   errorKeys,
+  objectCaptions,
   onPlace,
 }: PlayerBoardProps): JSX.Element | null {
+  // The instant object caption. A single viewport-fixed chip, moved straight from
+  // the pointer and toggled via a ref so hovering never re-renders the board —
+  // the same trick the picked-up-tool cursor uses. Fixed positioning also lets it
+  // escape the scrolling board's clip.
+  const captionRef = useRef<HTMLDivElement | null>(null)
+  function moveCaption(e: ReactMouseEvent): void {
+    const el = captionRef.current
+    if (el) el.style.transform = `translate(${e.clientX + 14}px, ${Math.max(8, e.clientY - 30)}px)`
+  }
+  function showCaption(e: ReactMouseEvent, text: string): void {
+    const el = captionRef.current
+    if (!el) return
+    el.textContent = text
+    moveCaption(e)
+    el.classList.add('is-visible')
+  }
+  function hideCaption(): void {
+    captionRef.current?.classList.remove('is-visible')
+  }
+
   // Which layer to draw: the puzzle's own play state unless the caller overrides
   // it (the editor's Answer key tab points these at the solution instead).
   const answers = answersProp ?? puzzle.answers
@@ -173,12 +205,24 @@ export function PlayerBoard({
         // A furnishing like a table fills its square, so no value (guess, answer,
         // or X) may land there — the cell reads as unplaceable while a tool's held.
         const blocked = isPlacementBlocked(puzzle.objects, key)
+        // Hover caption for a furnished square. The handlers ride the interactive
+        // cell (not the click-through object art on top), so hovering shows the
+        // caption without stealing a placement click on chair/carpet/bed.
+        const objectKind = puzzle.objects[key]
+        const caption = objectCaptions && objectKind ? OBJECT_LABEL[objectKind] : undefined
         const pos: CSSProperties = {
           gridColumn: x - originX + 1,
           gridRow: y - originY + 1,
         }
         return (
-          <div key={key} className={`cell-pos${blocked ? ' cell-blocked' : ''}`} style={pos}>
+          <div
+            key={key}
+            className={`cell-pos${blocked ? ' cell-blocked' : ''}`}
+            style={pos}
+            onMouseEnter={caption ? (e) => showCaption(e, caption) : undefined}
+            onMouseMove={caption ? moveCaption : undefined}
+            onMouseLeave={caption ? hideCaption : undefined}
+          >
             <Cell
               state={state}
               guesses={chipsFor(key)}
@@ -241,6 +285,8 @@ export function PlayerBoard({
           </div>
         )
       })}
+
+      {objectCaptions && <div ref={captionRef} className="obj-caption" aria-hidden="true" />}
     </div>
   )
 
