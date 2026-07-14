@@ -254,19 +254,31 @@ export function spanPieces(
 const LONE_CARPET_TILE = 1
 
 /**
+ * The fully-covered, border-less interior rug — used for a carpet cell fenced in
+ * by carpet on all four sides *and* all four corners (blob index 255). The carpet
+ * tileset stores that solid interior at file 07, whereas the blob table sends 255
+ * to frame 32 → file 33, which is *empty* in the carpet set (the table set, by
+ * contrast, does hold its solid interior at file 33). Without this override a 3×3+
+ * carpet renders a floor-coloured hole in the middle.
+ */
+const CARPET_INTERIOR_TILE = 7
+
+/**
  * Core blob-autotile: the file number (1–49) for a cell belonging to a tile group
  * defined by `member(x, y)`, or `loneTile` when the cell has no same-group
  * neighbour at all. Two squares fuse only when both are members *and* no wall
  * fences them apart; a corner fills only when its whole 2×2 quadrant is member and
  * wall-free, so a run never bleeds across a wall. Shared by tables and carpets,
- * which differ only in where their membership lives and what a lone cell shows.
+ * which differ only in where their membership lives, what a lone cell shows, and
+ * (via `fullTile`) which file holds the fully-covered interior piece.
  */
 function tileNumberForGroup(
   member: (x: number, y: number) => boolean,
   walls: Record<string, true>,
   x: number,
   y: number,
-  loneTile: number | null
+  loneTile: number | null,
+  fullTile: number | null = null
 ): number | null {
   const linked = (ax: number, ay: number, bx: number, by: number): boolean =>
     member(bx, by) && !wallBetween(walls, ax, ay, bx, by)
@@ -282,6 +294,7 @@ function tileNumberForGroup(
     (n ? 1 : 0) + (ne ? 2 : 0) + (e ? 4 : 0) + (se ? 8 : 0) +
     (s ? 16 : 0) + (sw ? 32 : 0) + (w ? 64 : 0) + (nw ? 128 : 0)
   if (idx === 0) return loneTile
+  if (idx === 255 && fullTile !== null) return fullTile
   return (BLOB_FRAME[idx] ?? 47) + 1
 }
 
@@ -317,7 +330,8 @@ export function carpetTileNumber(
     walls,
     x,
     y,
-    LONE_CARPET_TILE
+    LONE_CARPET_TILE,
+    CARPET_INTERIOR_TILE
   ) as number
 }
 
