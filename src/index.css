@@ -336,9 +336,17 @@ body {
 /* A single column's or row's persona letters, packed toward the board. */
 .summary-lane { display: flex; flex-wrap: wrap; gap: 3px; }
 .summary-col { align-content: flex-end; justify-content: center; align-items: flex-end; padding: 2px; }
+/* Row summaries sit beside the board, so a lane with many personas laid out in one
+   horizontal line widens the whole frame into a scrollbar. Stack the chips into up
+   to 3 vertical levels instead (three 20px chips + gaps still fit one cell's
+   height), flowing into new columns — down-then-right — so the strip grows slowly
+   in width. The level count is set inline per lane (see PlayerBoard). */
 .summary-row {
-  align-items: center; align-content: center; height: 100%;
-  max-width: calc(var(--cell) * 3); padding: 0 4px;
+  display: grid;
+  grid-auto-flow: column;
+  grid-auto-columns: max-content;
+  justify-content: start; align-content: center;
+  gap: 3px; height: 100%; padding: 0 4px;
 }
 .summary-lane .guess-chip { min-width: 20px; height: 20px; font-size: 12px; }
 /* A committed answer stands out from a tentative guess with an inner ring. */

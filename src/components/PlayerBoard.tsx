@@ -329,8 +329,17 @@ export function PlayerBoard({
         {[...rowKeys].map(([y, laneKeys]) => {
           const chips = laneSummary(laneKeys)
           if (chips.length === 0) return null
+          // Stack the lane's chips into up to 3 vertical levels so a row with many
+          // personas grows in columns (down-then-right) instead of one long line
+          // that widens the frame into a horizontal scrollbar. Three 20px chips plus
+          // gaps still fit within one cell's height, so the strip stays lane-aligned.
+          const levels = Math.min(3, chips.length)
           return (
-            <div key={`row-${y}`} className="summary-lane summary-row" style={{ gridRow: y - originY + 1 }}>
+            <div
+              key={`row-${y}`}
+              className="summary-lane summary-row"
+              style={{ gridRow: y - originY + 1, gridTemplateRows: `repeat(${levels}, auto)` }}
+            >
               {chips.map((c) => (
                 <span
                   key={c.id}
