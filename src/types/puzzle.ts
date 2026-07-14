@@ -56,7 +56,7 @@ export type ObjectKind =
   | 'mud'
   | 'oilslick'
   | 'car'
-  | 'tower'
+  | 'towel'
 
 /**
  * The kinds that occupy a square — every object except the wall-bound ones. A

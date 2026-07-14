@@ -32,7 +32,7 @@ const PAD = 1
  * same way but offers only interior walls (a door joins two rooms).
  *
  * Carpets and tables autotile: a run of them fuses into one piece using the
- * murdoku.com tile art (see `tileNumberFor`). Span kinds (bed/car/tower) fuse
+ * murdoku.com tile art (see `tileNumberFor`). Span kinds (bed/towel/car) fuse
  * more simply, pairing adjacent same-kind squares into one two-cell image.
  */
 export function ObjectsBoard({

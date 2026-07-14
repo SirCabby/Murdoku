@@ -36,7 +36,7 @@ const DOOR_ICON = baseIconUrl('door')
 /**
  * The artwork (and border-affecting classes) for one placed object — shared by
  * the interactive `ObjectsBoard` and the read-only `ObjectDecor` so both draw a
- * carpet/table/bed identically. Span kinds (bed/car/tower) return no image;
+ * carpet/table/bed identically. Span kinds (bed/towel/car) return no image;
  * they're drawn by the spanning-piece layer instead.
  */
 export function objectCellContent(

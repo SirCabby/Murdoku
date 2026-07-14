@@ -46,7 +46,7 @@ export const CELL_OBJECT_KINDS: CellObjectKind[] = [
   'horse',
   'lion',
   'car',
-  'tower',
+  'towel',
 ]
 
 export const OBJECT_LABEL: Record<ObjectKind, string> = {
@@ -84,7 +84,7 @@ export const OBJECT_LABEL: Record<ObjectKind, string> = {
   mud: 'Mud',
   oilslick: 'Oil slick',
   car: 'Car',
-  tower: 'Tower',
+  towel: 'Towel',
 }
 
 /**
@@ -133,7 +133,7 @@ export function isPlacementBlocked(
 // ---- Merging ----------------------------------------------------------------
 // Some furnishings fuse with same-kind neighbours so a run of them reads as one
 // piece. Carpet and table use the puzzle-authoring tile art from murdoku.com
-// (a 49-piece autotile set). The "span" kinds (bed/car/tower) are different: on
+// (a 49-piece autotile set). The "span" kinds (bed/towel/car) are different: on
 // the source site each is a two-cell "domino" drawn as one image, never
 // autotiled — so adjacent same-kind squares are paired into pieces and each pair
 // (or leftover single) renders as one spanning image (see `spanPieces`).
@@ -179,15 +179,15 @@ const BLOB_FRAME: Record<number, number> = {
 
 /**
  * The furnishings drawn as one two-cell piece rather than a per-square icon, each
- * mapped to the directions it may fuse along (tried in order). A bed fuses either
- * way (`obj_bed` horizontal / `obj_bed_top` vertical); a car only side-to-side
- * (it's a wide side view); a tower only top-to-bottom (it's a tall spire). A
- * square with no same-kind partner in an allowed direction renders as a single.
+ * mapped to the directions it may fuse along (tried in order). A bed and a towel
+ * fuse either way (a `<kind>_top` drawing for the vertical piece); a car only
+ * side-to-side (it's a wide side view). A square with no same-kind partner in an
+ * allowed direction renders as a single.
  */
 export const SPAN_KINDS: Partial<Record<CellObjectKind, ('east' | 'south')[]>> = {
   bed: ['east', 'south'],
+  towel: ['east', 'south'],
   car: ['east'],
-  tower: ['south'],
 }
 
 export function isSpanKind(kind: CellObjectKind): boolean {
@@ -205,7 +205,7 @@ export interface SpanPiece {
 }
 
 /**
- * Pairs span-kind squares (bed/car/tower) into two-cell pieces for rendering. A
+ * Pairs span-kind squares (bed/towel/car) into two-cell pieces for rendering. A
  * deterministic row-major sweep pairs each unclaimed square with a same-kind
  * neighbour along one of that kind's allowed directions (east before south);
  * anything unpaired is a single. A wall between two squares blocks the pairing,

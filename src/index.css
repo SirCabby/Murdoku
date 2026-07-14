@@ -425,7 +425,7 @@ body {
 /* Carpet/table tiles abut with no border or padding so a run reads as one piece;
    the floor still shows through the tile art's transparent parts. */
 .ocell-tile { padding: 0; border-color: transparent; }
-/* Span squares (bed/car/tower) are just seamless floor; the spanning piece image
+/* Span squares (bed/towel/car) are just seamless floor; the spanning piece image
    draws the object across the cells it covers. */
 .ocell-span { padding: 0; border-color: transparent; }
 .obj-span {

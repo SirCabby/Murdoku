@@ -46,17 +46,21 @@ export function baseIconUrl(kind: ObjectKind): string {
   return url
 }
 
+// Span kinds whose vertical piece is a separate `<kind>_top` drawing rather than
+// the horizontal icon reused. A car has one drawing (it only ever spans
+// horizontally), used at any orientation.
+const TOP_VARIANT_SPAN_KINDS = new Set<CellObjectKind>(['bed', 'towel'])
+
 /**
- * The artwork for a span piece (bed/car/tower). A bed swaps between horizontal
- * (`obj_bed`) and vertical (`obj_bed_top`) art; a car and a tower each have a
- * single drawing (a car only ever spans horizontally, a tower vertically), used
- * at any orientation — object-fit keeps a leftover single letterboxed, not
- * squished.
+ * The artwork for a span piece (bed/towel/car). A bed and a towel swap between
+ * horizontal (`<kind>`) and vertical (`<kind>_top`) art; a car uses its single
+ * drawing at any orientation — object-fit keeps a leftover single letterboxed,
+ * not squished.
  */
 export function spanImageUrl(kind: CellObjectKind, vertical: boolean): string {
-  if (kind === 'bed') {
-    const url = vertical ? baseUrls['bed_top'] : baseUrls['bed']
-    if (!url) throw new Error('Missing bed artwork')
+  if (vertical && TOP_VARIANT_SPAN_KINDS.has(kind)) {
+    const url = baseUrls[`${kind}_top`]
+    if (!url) throw new Error(`Missing ${kind} vertical artwork`)
     return url
   }
   return baseIconUrl(kind)
