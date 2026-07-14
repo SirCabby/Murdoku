@@ -34,6 +34,7 @@ export function PuzzleEditor({ puzzleId, onDone }: PuzzleEditorProps): JSX.Eleme
     clearWalls,
     setObject,
     setWindow,
+    setDoor,
     clearObjects,
     addLabel,
     moveLabel,
@@ -75,6 +76,7 @@ export function PuzzleEditor({ puzzleId, onDone }: PuzzleEditorProps): JSX.Eleme
   const wallCount = Object.keys(puzzle.walls).length
   const objectCount = Object.keys(puzzle.objects).length
   const windowCount = Object.keys(puzzle.windows).length
+  const doorCount = Object.keys(puzzle.doors).length
   const labelCount = puzzle.labels.length
   const hintCount = puzzle.hints.length
   const solutionCount = Object.keys(puzzle.solution).length
@@ -261,11 +263,11 @@ export function PuzzleEditor({ puzzleId, onDone }: PuzzleEditorProps): JSX.Eleme
             <button
               type="button"
               className="btn btn-small btn-ghost"
-              disabled={objectCount + windowCount === 0}
+              disabled={objectCount + windowCount + doorCount === 0}
               onClick={() => {
                 if (
-                  objectCount + windowCount === 0 ||
-                  confirm('Remove every object and window from this puzzle?')
+                  objectCount + windowCount + doorCount === 0 ||
+                  confirm('Remove every object, window, and door from this puzzle?')
                 )
                   clearObjects(puzzleId)
               }}
@@ -274,7 +276,7 @@ export function PuzzleEditor({ puzzleId, onDone }: PuzzleEditorProps): JSX.Eleme
             </button>
             <span className="toolbar-count">
               {objectCount} object{objectCount === 1 ? '' : 's'} · {windowCount} window
-              {windowCount === 1 ? '' : 's'}
+              {windowCount === 1 ? '' : 's'} · {doorCount} door{doorCount === 1 ? '' : 's'}
             </span>
           </div>
 
@@ -305,6 +307,15 @@ export function PuzzleEditor({ puzzleId, onDone }: PuzzleEditorProps): JSX.Eleme
                 </button>
                 <button
                   type="button"
+                  className={`ptool${tool === 'door' ? ' active' : ''}`}
+                  aria-pressed={tool === 'door'}
+                  onClick={() => setTool('door')}
+                >
+                  <img className="ptool-icon" src={baseIconUrl('door')} alt="" aria-hidden="true" />
+                  <span className="ptool-label">{OBJECT_LABEL.door}</span>
+                </button>
+                <button
+                  type="button"
                   className={`ptool ptool-erase${tool === 'erase' ? ' active' : ''}`}
                   aria-pressed={tool === 'erase'}
                   onClick={() => setTool('erase')}
@@ -319,7 +330,9 @@ export function PuzzleEditor({ puzzleId, onDone }: PuzzleEditorProps): JSX.Eleme
               <p className="hint">
                 {tool === 'window'
                   ? 'Click a wall — an interior wall or the outer edge — to add a window; click it again to remove it. Windows can only sit on walls.'
-                  : 'Pick an object, then click or drag across squares to place it. Only one object fits per square; click a matching square again to clear it.'}
+                  : tool === 'door'
+                    ? 'Click an interior wall to add a door; click it again to remove it. Doors join two rooms, so they only sit on interior walls (raise the wall in Walls mode first).'
+                    : 'Pick an object, then click or drag across squares to place it. Only one object fits per square; click a matching square again to clear it.'}
               </p>
 
               <div className="board-scroll">
@@ -328,6 +341,7 @@ export function PuzzleEditor({ puzzleId, onDone }: PuzzleEditorProps): JSX.Eleme
                   tool={tool}
                   onSetObject={(x, y, kind) => setObject(puzzleId, x, y, kind)}
                   onSetWindow={(key, on) => setWindow(puzzleId, key, on)}
+                  onSetDoor={(key, on) => setDoor(puzzleId, key, on)}
                 />
               </div>
             </>

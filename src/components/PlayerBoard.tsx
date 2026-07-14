@@ -4,7 +4,7 @@ import { boundsOf, parseCellKey } from '../lib/coords'
 import { parseWallKey, perimeterEdges } from '../lib/walls'
 import { personaLabel, suspectsOf, victimOf } from '../lib/personas'
 import { isPlacementBlocked } from '../lib/objects'
-import { ObjectDecor, WindowDecor } from './BoardDecor'
+import { DoorDecor, ObjectDecor, WindowDecor } from './BoardDecor'
 import { Cell } from './Cell'
 import type { GuessChip } from './Cell'
 
@@ -226,6 +226,7 @@ export function PlayerBoard({
       })}
 
       <WindowDecor puzzle={puzzle} originX={originX} originY={originY} anchorInCell />
+      <DoorDecor puzzle={puzzle} originX={originX} originY={originY} />
 
       {puzzle.labels.map((label) => {
         const text = label.text.trim()

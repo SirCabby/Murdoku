@@ -20,8 +20,10 @@ import {
 import { pruneWalls, setWall as setWallOp } from '../lib/walls'
 import {
   isPlacementBlocked,
+  pruneDoors,
   pruneObjects,
   pruneWindows,
+  setDoor as setDoorOp,
   setObject as setObjectOp,
   setWindow as setWindowOp,
 } from '../lib/objects'
@@ -90,6 +92,8 @@ export interface LibraryApi {
   // Objects (furnishings)
   setObject: (puzzleId: string, x: number, y: number, kind: CellObjectKind | null) => void
   setWindow: (puzzleId: string, key: string, on: boolean) => void
+  /** Add or remove a door on an edge — legal only on an interior wall. */
+  setDoor: (puzzleId: string, key: string, on: boolean) => void
   clearObjects: (puzzleId: string) => void
   // Room-name labels
   addLabel: (puzzleId: string, x: number, y: number) => RoomLabel
@@ -247,6 +251,7 @@ export function LibraryProvider({ children }: { children: ReactNode }): JSX.Elem
           walls: {},
           objects: {},
           windows: {},
+          doors: {},
           labels: [],
           hints: [],
           personas: defaultPersonas(),
@@ -301,13 +306,14 @@ export function LibraryProvider({ children }: { children: ReactNode }): JSX.Elem
           // as window mounts.
           const objects = pruneObjects(p.objects, cells)
           const windows = pruneWindows(p.windows, cells, walls)
+          const doors = pruneDoors(p.doors, cells, walls)
           // Removing a cell also drops any guesses, answer, X, or answer-key
           // placement that sat there.
           const guesses = pruneGuesses(p.guesses, cells)
           const answers = pruneAnswers(p.answers, cells)
           const crosses = pruneCrosses(p.crosses, cells)
           const solution = pruneSolution(p.solution, cells)
-          return { ...p, cells, walls, objects, windows, guesses, answers, crosses, solution }
+          return { ...p, cells, walls, objects, windows, doors, guesses, answers, crosses, solution }
         })
       },
 
@@ -321,6 +327,7 @@ export function LibraryProvider({ children }: { children: ReactNode }): JSX.Elem
             walls,
             objects: pruneObjects(p.objects, cells),
             windows: pruneWindows(p.windows, cells, walls),
+            doors: pruneDoors(p.doors, cells, walls),
             guesses: pruneGuesses(p.guesses, cells),
             answers: pruneAnswers(p.answers, cells),
             crosses: pruneCrosses(p.crosses, cells),
@@ -336,6 +343,7 @@ export function LibraryProvider({ children }: { children: ReactNode }): JSX.Elem
           walls: {},
           objects: {},
           windows: {},
+          doors: {},
           // Labels are anchored in lattice space, so an empty shape leaves them
           // floating over nothing — clear them out with the cells they named.
           labels: [],
@@ -352,8 +360,14 @@ export function LibraryProvider({ children }: { children: ReactNode }): JSX.Elem
         patchPuzzle(puzzleId, (p) => {
           const walls = setWallOp(p.walls, key, on)
           if (walls === p.walls) return p
-          // Removing a wall can strip an interior edge's window.
-          return { ...p, walls, windows: pruneWindows(p.windows, p.cells, walls) }
+          // Removing a wall can strip an interior edge's window, and always
+          // strips any door that was mounted on that wall.
+          return {
+            ...p,
+            walls,
+            windows: pruneWindows(p.windows, p.cells, walls),
+            doors: pruneDoors(p.doors, p.cells, walls),
+          }
         })
       },
 
@@ -361,7 +375,12 @@ export function LibraryProvider({ children }: { children: ReactNode }): JSX.Elem
         patchPuzzle(puzzleId, (p) =>
           Object.keys(p.walls).length === 0
             ? p
-            : { ...p, walls: {}, windows: pruneWindows(p.windows, p.cells, {}) }
+            : {
+                ...p,
+                walls: {},
+                windows: pruneWindows(p.windows, p.cells, {}),
+                doors: pruneDoors(p.doors, p.cells, {}),
+              }
         )
       },
 
@@ -385,11 +404,20 @@ export function LibraryProvider({ children }: { children: ReactNode }): JSX.Elem
         })
       },
 
+      setDoor(puzzleId, key, on) {
+        patchPuzzle(puzzleId, (p) => {
+          const doors = setDoorOp(p.doors, key, on)
+          return doors === p.doors ? p : { ...p, doors }
+        })
+      },
+
       clearObjects(puzzleId) {
         patchPuzzle(puzzleId, (p) =>
-          Object.keys(p.objects).length === 0 && Object.keys(p.windows).length === 0
+          Object.keys(p.objects).length === 0 &&
+          Object.keys(p.windows).length === 0 &&
+          Object.keys(p.doors).length === 0
             ? p
-            : { ...p, objects: {}, windows: {} }
+            : { ...p, objects: {}, windows: {}, doors: {} }
         )
       },
 

@@ -2,8 +2,8 @@ import type { CSSProperties } from 'react'
 import type { CellObjectKind, Puzzle } from '../types/puzzle'
 import { cellKey, parseCellKey } from '../lib/coords'
 import { parseWallKey } from '../lib/walls'
-import { bedDominoes, isTileMergeKind, tileNumberFor } from '../lib/objects'
-import { baseIconUrl, bedImageUrl, tileUrl } from '../lib/objectAssets'
+import { isSpanKind, isTileMergeKind, spanPieces, tileNumberFor } from '../lib/objects'
+import { baseIconUrl, spanImageUrl, tileUrl } from '../lib/objectAssets'
 
 // Read-only overlays so every editor mode can show the whole puzzle — objects,
 // windows, and room names — not just the layer it edits. Each takes the board's
@@ -31,12 +31,13 @@ interface WindowDecorProps extends DecorProps {
 }
 
 const WINDOW_ICON = baseIconUrl('window')
+const DOOR_ICON = baseIconUrl('door')
 
 /**
  * The artwork (and border-affecting classes) for one placed object — shared by
  * the interactive `ObjectsBoard` and the read-only `ObjectDecor` so both draw a
- * carpet/table/bed identically. Beds return no image; they're drawn by the
- * spanning-domino layer instead.
+ * carpet/table/bed identically. Span kinds (bed/car/tower) return no image;
+ * they're drawn by the spanning-piece layer instead.
  */
 export function objectCellContent(
   objects: Record<string, CellObjectKind>,
@@ -53,8 +54,8 @@ export function objectCellContent(
     }
     return { cls: ' ocell-tile', img: <img className="obj-fill" src={tileUrl(kind, tile)} alt="" /> }
   }
-  if (kind === 'bed') {
-    return { cls: ' ocell-bed', img: null }
+  if (isSpanKind(kind)) {
+    return { cls: ' ocell-span', img: null }
   }
   return { cls: '', img: <img className="obj-fit" src={baseIconUrl(kind)} alt="" /> }
 }
@@ -70,7 +71,7 @@ export function ObjectDecor({ puzzle, originX, originY }: DecorProps): JSX.Eleme
       {Object.entries(puzzle.objects).map(([key, kind]) => {
         const { x, y } = parseCellKey(key)
         const { cls, img } = objectCellContent(puzzle.objects, x, y, kind, puzzle.walls)
-        if (!img) return null // beds are drawn by the domino layer below
+        if (!img) return null // span kinds are drawn by the piece layer below
         const pos: CSSProperties = {
           gridColumn: x - originX + 1,
           gridRow: y - originY + 1,
@@ -82,17 +83,17 @@ export function ObjectDecor({ puzzle, originX, originY }: DecorProps): JSX.Eleme
         )
       })}
 
-      {bedDominoes(puzzle.objects, puzzle.walls).map((piece) => {
+      {spanPieces(puzzle.objects, puzzle.walls).map((piece) => {
         const pos: CSSProperties = {
           gridColumn: `${piece.x - originX + 1} / span ${piece.w}`,
           gridRow: `${piece.y - originY + 1} / span ${piece.h}`,
         }
         return (
           <img
-            key={`bed-${piece.x},${piece.y}`}
-            className="bed-span"
+            key={`span-${piece.x},${piece.y}`}
+            className="obj-span"
             style={pos}
-            src={bedImageUrl(piece.h > piece.w)}
+            src={spanImageUrl(piece.kind, piece.h > piece.w)}
             alt=""
             aria-hidden="true"
           />
@@ -141,6 +142,37 @@ export function WindowDecor({ puzzle, originX, originY, anchorInCell }: WindowDe
         }
         return (
           <img key={`win-${key}`} className={cls} style={pos} src={WINDOW_ICON} alt="" aria-hidden="true" />
+        )
+      })}
+    </>
+  )
+}
+
+/**
+ * Read-only door icons sitting on their interior walls. A door always divides two
+ * existing cells, so — unlike a window — it never needs perimeter re-seating or
+ * flipping: it is keyed from its top-left cell and drawn on that cell's right (v)
+ * or bottom (h) edge, the same wall line in every mode (padded editor boards and
+ * the padless play board alike, since that keyed cell always exists).
+ */
+export function DoorDecor({ puzzle, originX, originY }: DecorProps): JSX.Element {
+  return (
+    <>
+      {Object.keys(puzzle.doors).map((key) => {
+        const { x, y, orient } = parseWallKey(key)
+        const pos: CSSProperties = {
+          gridColumn: x - originX + 1,
+          gridRow: y - originY + 1,
+        }
+        return (
+          <img
+            key={`door-${key}`}
+            className={`door-icon door-icon-${orient}`}
+            style={pos}
+            src={DOOR_ICON}
+            alt=""
+            aria-hidden="true"
+          />
         )
       })}
     </>

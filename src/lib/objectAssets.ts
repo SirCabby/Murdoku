@@ -46,11 +46,20 @@ export function baseIconUrl(kind: ObjectKind): string {
   return url
 }
 
-/** The bed artwork for a domino: horizontal `obj_bed` or vertical `obj_bed_top`. */
-export function bedImageUrl(vertical: boolean): string {
-  const url = vertical ? baseUrls['bed_top'] : baseUrls['bed']
-  if (!url) throw new Error('Missing bed artwork')
-  return url
+/**
+ * The artwork for a span piece (bed/car/tower). A bed swaps between horizontal
+ * (`obj_bed`) and vertical (`obj_bed_top`) art; a car and a tower each have a
+ * single drawing (a car only ever spans horizontally, a tower vertically), used
+ * at any orientation — object-fit keeps a leftover single letterboxed, not
+ * squished.
+ */
+export function spanImageUrl(kind: CellObjectKind, vertical: boolean): string {
+  if (kind === 'bed') {
+    const url = vertical ? baseUrls['bed_top'] : baseUrls['bed']
+    if (!url) throw new Error('Missing bed artwork')
+    return url
+  }
+  return baseIconUrl(kind)
 }
 
 /** An autotile piece (1–49) for a carpet or table cell. */

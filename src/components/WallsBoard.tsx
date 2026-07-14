@@ -3,7 +3,7 @@ import type { CSSProperties, PointerEvent as ReactPointerEvent } from 'react'
 import type { Puzzle } from '../types/puzzle'
 import { boundsOf, parseCellKey } from '../lib/coords'
 import { interiorEdges, perimeterEdges } from '../lib/walls'
-import { LabelDecor, ObjectDecor, WindowDecor } from './BoardDecor'
+import { DoorDecor, LabelDecor, ObjectDecor, WindowDecor } from './BoardDecor'
 
 interface WallsBoardProps {
   puzzle: Puzzle
@@ -90,6 +90,7 @@ export function WallsBoard({ puzzle, onSetWall }: WallsBoardProps): JSX.Element 
       })}
 
       <WindowDecor puzzle={puzzle} originX={originX} originY={originY} />
+      <DoorDecor puzzle={puzzle} originX={originX} originY={originY} />
       <LabelDecor puzzle={puzzle} originX={originX} originY={originY} />
 
       {interiorEdges(puzzle.cells).map((edge) => {

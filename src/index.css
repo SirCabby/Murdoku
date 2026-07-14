@@ -391,6 +391,7 @@ body {
 .wtarget.on::after { opacity: 1; }
 /* Window edge targets reuse the wall-target geometry, tinted with the accent. */
 .wtarget.window::after { background: var(--accent); }
+.wtarget.door::after { background: #c98a3c; }
 
 /* ---- Objects (furnishings) ---- */
 /* Every edit mode lays its cells on the warm "room floor" (see the --floor vars
@@ -424,9 +425,10 @@ body {
 /* Carpet/table tiles abut with no border or padding so a run reads as one piece;
    the floor still shows through the tile art's transparent parts. */
 .ocell-tile { padding: 0; border-color: transparent; }
-/* Bed squares are just seamless floor; the spanning domino image draws the bed. */
-.ocell-bed { padding: 0; border-color: transparent; }
-.bed-span {
+/* Span squares (bed/car/tower) are just seamless floor; the spanning piece image
+   draws the object across the cells it covers. */
+.ocell-span { padding: 0; border-color: transparent; }
+.obj-span {
   z-index: 4; pointer-events: none;
   width: 100%; height: 100%; object-fit: contain;
   filter: drop-shadow(0 1px 1px rgba(20, 20, 22, 0.35));
@@ -448,6 +450,16 @@ body {
    same inward facing, but keyed to a real cell so no outside track is needed. */
 .window-icon-h-below { justify-self: center; align-self: start; transform: translateY(-50%) rotate(180deg); }
 .window-icon-v-right { justify-self: start; align-self: center; transform: translateX(-50%) rotate(90deg); }
+
+/* A placed door: its leaf art sitting on an interior wall, rotated to run along a
+   vertical edge. Interior-only (it always divides two cells), so — unlike a
+   window — it never needs to flip to face a room. */
+.door-icon {
+  z-index: 8; pointer-events: none; width: 82%; height: auto;
+  filter: drop-shadow(0 0 0.5px rgba(20, 20, 22, 0.6));
+}
+.door-icon-h { justify-self: center; align-self: end; transform: translateY(50%); }
+.door-icon-v { justify-self: end; align-self: center; transform: translateX(50%) rotate(90deg); }
 
 /* ---- Object palette ---- */
 .palette {

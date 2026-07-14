@@ -1,7 +1,7 @@
 import type { CellObjectKind, CellState, ObjectKind } from '../types/puzzle'
 import { cellKey, parseCellKey } from './coords'
 import type { CandidateEdge } from './walls'
-import { edgeBetween, parseWallKey, setWall, wallKey } from './walls'
+import { edgeBetween, interiorEdges, parseWallKey, setWall, wallKey } from './walls'
 
 // Pure operations on a puzzle's furnishings. Two concerns, mirroring how cells
 // and walls are split:
@@ -23,6 +23,30 @@ export const CELL_OBJECT_KINDS: CellObjectKind[] = [
   'shelf',
   'box',
   'register',
+  'crate',
+  'barrel',
+  'locker',
+  'weaponsrack',
+  'present',
+  'vase',
+  'trashcan',
+  'boulder',
+  'rubble',
+  'tree',
+  'bush',
+  'pumpkin',
+  'mud',
+  'oilslick',
+  'statue',
+  'gaspump',
+  'punchingbag',
+  'catapult',
+  'cow',
+  'pig',
+  'horse',
+  'lion',
+  'car',
+  'tower',
 ]
 
 export const OBJECT_LABEL: Record<ObjectKind, string> = {
@@ -30,12 +54,37 @@ export const OBJECT_LABEL: Record<ObjectKind, string> = {
   carpet: 'Carpet',
   bed: 'Bed',
   window: 'Window',
+  door: 'Door',
   table: 'Table',
   tv: 'TV',
   plant: 'Plant',
   shelf: 'Shelf',
   box: 'Box',
   register: 'Cash register',
+  boulder: 'Boulder',
+  rubble: 'Rubble',
+  present: 'Present',
+  statue: 'Statue',
+  locker: 'Locker',
+  punchingbag: 'Punching bag',
+  gaspump: 'Gas pump',
+  catapult: 'Catapult',
+  vase: 'Vase',
+  weaponsrack: 'Weapons rack',
+  crate: 'Crate',
+  barrel: 'Barrel',
+  lion: 'Lion',
+  bush: 'Bush',
+  pumpkin: 'Pumpkin',
+  trashcan: 'Trash can',
+  cow: 'Cow',
+  pig: 'Pig',
+  tree: 'Tree',
+  horse: 'Horse',
+  mud: 'Mud',
+  oilslick: 'Oil slick',
+  car: 'Car',
+  tower: 'Tower',
 }
 
 /**
@@ -51,6 +100,25 @@ export const BLOCKING_OBJECT_KINDS = new Set<CellObjectKind>([
   'shelf',
   'box',
   'register',
+  'boulder',
+  'rubble',
+  'present',
+  'statue',
+  'locker',
+  'punchingbag',
+  'gaspump',
+  'catapult',
+  'vase',
+  'weaponsrack',
+  'crate',
+  'barrel',
+  'lion',
+  'bush',
+  'pumpkin',
+  'trashcan',
+  'cow',
+  'pig',
+  'tree',
 ])
 
 /** Does the object occupying `key` (if any) forbid placing a value there? */
@@ -65,10 +133,10 @@ export function isPlacementBlocked(
 // ---- Merging ----------------------------------------------------------------
 // Some furnishings fuse with same-kind neighbours so a run of them reads as one
 // piece. Carpet and table use the puzzle-authoring tile art from murdoku.com
-// (a 49-piece autotile set). A bed is different: on the source site a bed is a
-// two-cell "domino" drawn as one image (`obj_bed` horizontal / `obj_bed_top`
-// vertical), never autotiled — so adjacent beds are paired into dominoes and
-// each pair (or leftover single) renders as one spanning image (see below).
+// (a 49-piece autotile set). The "span" kinds (bed/car/tower) are different: on
+// the source site each is a two-cell "domino" drawn as one image, never
+// autotiled — so adjacent same-kind squares are paired into pieces and each pair
+// (or leftover single) renders as one spanning image (see `spanPieces`).
 //
 // A wall fences neighbours apart: two same-kind squares separated by a wall are
 // distinct furnishings in distinct rooms, so they must not fuse. Every fuse test
@@ -109,8 +177,26 @@ const BLOB_FRAME: Record<number, number> = {
   247: 26, 253: 22, 255: 32,
 }
 
-/** A bed piece to draw: its anchor square and how many cells it spans. */
-export interface BedPiece {
+/**
+ * The furnishings drawn as one two-cell piece rather than a per-square icon, each
+ * mapped to the directions it may fuse along (tried in order). A bed fuses either
+ * way (`obj_bed` horizontal / `obj_bed_top` vertical); a car only side-to-side
+ * (it's a wide side view); a tower only top-to-bottom (it's a tall spire). A
+ * square with no same-kind partner in an allowed direction renders as a single.
+ */
+export const SPAN_KINDS: Partial<Record<CellObjectKind, ('east' | 'south')[]>> = {
+  bed: ['east', 'south'],
+  car: ['east'],
+  tower: ['south'],
+}
+
+export function isSpanKind(kind: CellObjectKind): boolean {
+  return kind in SPAN_KINDS
+}
+
+/** A span piece to draw: its kind, anchor square, and how many cells it covers. */
+export interface SpanPiece {
+  kind: CellObjectKind
   x: number
   y: number
   /** 2×1 = horizontal domino, 1×2 = vertical, 1×1 = leftover single. */
@@ -119,35 +205,41 @@ export interface BedPiece {
 }
 
 /**
- * Pairs bed squares into two-cell dominoes for rendering. A deterministic
- * row-major sweep pairs each unclaimed bed with its east neighbour first, else
- * its south neighbour; anything unpaired is a single. A wall between two beds
- * blocks the pairing, so beds in separate rooms stay separate. Every bed square
- * lands in exactly one piece, so a run of beds reads as whole beds rather than
- * repeated icons.
+ * Pairs span-kind squares (bed/car/tower) into two-cell pieces for rendering. A
+ * deterministic row-major sweep pairs each unclaimed square with a same-kind
+ * neighbour along one of that kind's allowed directions (east before south);
+ * anything unpaired is a single. A wall between two squares blocks the pairing,
+ * so pieces in separate rooms stay separate. Every span square lands in exactly
+ * one piece, so a run reads as whole objects rather than repeated icons.
  */
-export function bedDominoes(
+export function spanPieces(
   objects: Record<string, CellObjectKind>,
   walls: Record<string, true>
-): BedPiece[] {
-  const isBed = (x: number, y: number): boolean => objects[cellKey(x, y)] === 'bed'
+): SpanPiece[] {
   const claimed = new Set<string>()
-  const pieces: BedPiece[] = []
-  const beds = Object.keys(objects)
-    .filter((k) => objects[k] === 'bed')
-    .map(parseCellKey)
+  const pieces: SpanPiece[] = []
+  const squares = Object.entries(objects)
+    .filter(([, kind]) => isSpanKind(kind))
+    .map(([k, kind]) => ({ ...parseCellKey(k), kind }))
     .sort((a, b) => a.y - b.y || a.x - b.x)
-  for (const { x, y } of beds) {
-    if (claimed.has(cellKey(x, y))) continue
-    if (isBed(x + 1, y) && !claimed.has(cellKey(x + 1, y)) && !wallBetween(walls, x, y, x + 1, y)) {
-      claimed.add(cellKey(x, y)).add(cellKey(x + 1, y))
-      pieces.push({ x, y, w: 2, h: 1 })
-    } else if (isBed(x, y + 1) && !claimed.has(cellKey(x, y + 1)) && !wallBetween(walls, x, y, x, y + 1)) {
-      claimed.add(cellKey(x, y)).add(cellKey(x, y + 1))
-      pieces.push({ x, y, w: 1, h: 2 })
-    } else {
-      claimed.add(cellKey(x, y))
-      pieces.push({ x, y, w: 1, h: 1 })
+  for (const { x, y, kind } of squares) {
+    const key = cellKey(x, y)
+    if (claimed.has(key)) continue
+    let paired = false
+    for (const dir of SPAN_KINDS[kind] ?? []) {
+      const nx = dir === 'east' ? x + 1 : x
+      const ny = dir === 'south' ? y + 1 : y
+      const nKey = cellKey(nx, ny)
+      if (objects[nKey] === kind && !claimed.has(nKey) && !wallBetween(walls, x, y, nx, ny)) {
+        claimed.add(key).add(nKey)
+        pieces.push({ kind, x, y, w: dir === 'east' ? 2 : 1, h: dir === 'south' ? 2 : 1 })
+        paired = true
+        break
+      }
+    }
+    if (!paired) {
+      claimed.add(key)
+      pieces.push({ kind, x, y, w: 1, h: 1 })
     }
   }
   return pieces
@@ -298,4 +390,56 @@ export function pruneWindows(
     else changed = true
   }
   return changed ? next : windows
+}
+
+// ---- Doors ------------------------------------------------------------------
+// A door is a window's close cousin — pure edge-membership on a wall. The one
+// difference is where it may mount: only an *interior* wall (an edge whose two
+// cells both exist and that carries a wall), never the outer perimeter, because a
+// door connects two rooms. So the legal door edges are exactly the walled
+// interior edges: a strict subset of `windowEdges`.
+
+/** Add or remove a door on an edge. Like a window, it's pure edge-membership. */
+export const setDoor = setWall
+
+/**
+ * Is `key` a legal door mount? True only for an interior wall: both adjacent
+ * cells exist and the edge carries a wall. A perimeter edge or an open (wall-less)
+ * interior edge holds no door.
+ */
+export function isDoorEdge(
+  key: string,
+  cells: Record<string, CellState>,
+  walls: Record<string, true>
+): boolean {
+  const { x, y, orient } = parseWallKey(key)
+  const aExists = cellKey(x, y) in cells
+  const bExists = (orient === 'v' ? cellKey(x + 1, y) : cellKey(x, y + 1)) in cells
+  return aExists && bExists && key in walls
+}
+
+/**
+ * Every edge a door may be dropped on: each interior edge (both cells exist) that
+ * carries a wall. The perimeter is excluded, so this is a subset of `windowEdges`.
+ */
+export function doorEdges(
+  cells: Record<string, CellState>,
+  walls: Record<string, true>
+): CandidateEdge[] {
+  return interiorEdges(cells).filter((e) => e.key in walls)
+}
+
+/** Drops any door whose edge is no longer a walled interior edge. Same map if unchanged. */
+export function pruneDoors(
+  doors: Record<string, true>,
+  cells: Record<string, CellState>,
+  walls: Record<string, true>
+): Record<string, true> {
+  const next: Record<string, true> = {}
+  let changed = false
+  for (const key of Object.keys(doors)) {
+    if (isDoorEdge(key, cells, walls)) next[key] = true
+    else changed = true
+  }
+  return changed ? next : doors
 }

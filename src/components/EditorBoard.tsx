@@ -3,7 +3,7 @@ import type { CSSProperties, PointerEvent as ReactPointerEvent } from 'react'
 import type { Puzzle } from '../types/puzzle'
 import { boundsOf, cellKey } from '../lib/coords'
 import { parseWallKey, perimeterEdges } from '../lib/walls'
-import { LabelDecor, ObjectDecor, WindowDecor } from './BoardDecor'
+import { DoorDecor, LabelDecor, ObjectDecor, WindowDecor } from './BoardDecor'
 
 interface EditorBoardProps {
   puzzle: Puzzle
@@ -127,6 +127,7 @@ export function EditorBoard({ puzzle, onSetCell }: EditorBoardProps): JSX.Elemen
       })}
 
       <WindowDecor puzzle={puzzle} originX={minX} originY={minY} />
+      <DoorDecor puzzle={puzzle} originX={minX} originY={minY} />
       <LabelDecor puzzle={puzzle} originX={minX} originY={minY} />
     </div>
   )

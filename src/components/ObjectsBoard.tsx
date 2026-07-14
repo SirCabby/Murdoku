@@ -3,9 +3,9 @@ import type { CSSProperties, PointerEvent as ReactPointerEvent } from 'react'
 import type { CellObjectKind, ObjectKind, Puzzle } from '../types/puzzle'
 import { boundsOf, parseCellKey } from '../lib/coords'
 import { parseWallKey, perimeterEdges } from '../lib/walls'
-import { OBJECT_LABEL, bedDominoes, windowEdges } from '../lib/objects'
-import { bedImageUrl } from '../lib/objectAssets'
-import { LabelDecor, WindowDecor, objectCellContent } from './BoardDecor'
+import { OBJECT_LABEL, doorEdges, spanPieces, windowEdges } from '../lib/objects'
+import { spanImageUrl } from '../lib/objectAssets'
+import { DoorDecor, LabelDecor, WindowDecor, objectCellContent } from './BoardDecor'
 
 /** What the palette currently has selected — an object kind, or the eraser. */
 export type ObjectTool = ObjectKind | 'erase'
@@ -15,6 +15,7 @@ interface ObjectsBoardProps {
   tool: ObjectTool
   onSetObject: (x: number, y: number, kind: CellObjectKind | null) => void
   onSetWindow: (key: string, on: boolean) => void
+  onSetDoor: (key: string, on: boolean) => void
 }
 
 // A one-cell ring around the shape so perimeter window edges (which key off a
@@ -24,29 +25,33 @@ const PAD = 1
 /**
  * Object-placement editor board. When a square tool is selected, each cell is a
  * paint target that places (or, with the eraser / a repeat click, clears) the
- * object; existing walls and windows are shown read-only for reference. When
- * the Window tool is selected, the cells go quiet and a clickable target
+ * object; existing walls, windows, and doors are shown read-only for reference.
+ * When the Window tool is selected, the cells go quiet and a clickable target
  * appears on every wall a window may mount on — interior walls and the outer
- * perimeter — mirroring the Walls-mode paint gesture.
+ * perimeter — mirroring the Walls-mode paint gesture. The Door tool works the
+ * same way but offers only interior walls (a door joins two rooms).
  *
  * Carpets and tables autotile: a run of them fuses into one piece using the
- * murdoku.com tile art (see `tileNumberFor`). Beds fuse more simply, by dropping
- * the border between adjacent beds.
+ * murdoku.com tile art (see `tileNumberFor`). Span kinds (bed/car/tower) fuse
+ * more simply, pairing adjacent same-kind squares into one two-cell image.
  */
 export function ObjectsBoard({
   puzzle,
   tool,
   onSetObject,
   onSetWindow,
+  onSetDoor,
 }: ObjectsBoardProps): JSX.Element | null {
   // Painted value locked on pointer-down, exactly like the shape/walls editors.
   const paintCell = useRef<{ kind: CellObjectKind | null } | null>(null)
   const paintWindow = useRef<boolean | null>(null)
+  const paintDoor = useRef<boolean | null>(null)
 
   useEffect(() => {
     const stop = (): void => {
       paintCell.current = null
       paintWindow.current = null
+      paintDoor.current = null
     }
     window.addEventListener('pointerup', stop)
     window.addEventListener('pointercancel', stop)
@@ -69,10 +74,13 @@ export function ObjectsBoard({
   }
 
   const windowTool = tool === 'window'
+  const doorTool = tool === 'door'
+  // Either edge tool (window/door) quiets the cells and paints on wall targets.
+  const edgeTool = windowTool || doorTool
 
-  /** The square kind this tool would place, or null when it erases. */
+  /** The square kind this tool would place, or null when it erases/edits edges. */
   function toolKind(): CellObjectKind | null {
-    if (tool === 'erase' || tool === 'window') return null
+    if (tool === 'erase' || tool === 'window' || tool === 'door') return null
     return tool
   }
 
@@ -101,6 +109,17 @@ export function ObjectsBoard({
     onSetWindow(key, paintWindow.current)
   }
 
+  function onDoorDown(e: ReactPointerEvent, key: string, on: boolean): void {
+    e.preventDefault()
+    paintDoor.current = on
+    onSetDoor(key, on)
+  }
+
+  function onDoorEnter(key: string): void {
+    if (paintDoor.current === null) return
+    onSetDoor(key, paintDoor.current)
+  }
+
   return (
     <div className="board objects-board" style={style}>
       {Object.keys(puzzle.cells).map((key) => {
@@ -114,7 +133,7 @@ export function ObjectsBoard({
           ? objectCellContent(puzzle.objects, x, y, kind, puzzle.walls)
           : { cls: '', img: null }
 
-        if (windowTool) {
+        if (edgeTool) {
           return (
             <div key={key} className={`ocell${cls}`} style={pos}>
               {img}
@@ -137,17 +156,17 @@ export function ObjectsBoard({
         )
       })}
 
-      {bedDominoes(puzzle.objects, puzzle.walls).map((piece) => {
+      {spanPieces(puzzle.objects, puzzle.walls).map((piece) => {
         const pos: CSSProperties = {
           gridColumn: `${piece.x - originX + 1} / span ${piece.w}`,
           gridRow: `${piece.y - originY + 1} / span ${piece.h}`,
         }
         return (
           <img
-            key={`bed-${piece.x},${piece.y}`}
-            className="bed-span"
+            key={`span-${piece.x},${piece.y}`}
+            className="obj-span"
             style={pos}
-            src={bedImageUrl(piece.h > piece.w)}
+            src={spanImageUrl(piece.kind, piece.h > piece.w)}
             alt=""
             aria-hidden="true"
           />
@@ -186,6 +205,7 @@ export function ObjectsBoard({
       })}
 
       <WindowDecor puzzle={puzzle} originX={originX} originY={originY} />
+      <DoorDecor puzzle={puzzle} originX={originX} originY={originY} />
       <LabelDecor puzzle={puzzle} originX={originX} originY={originY} />
 
       {windowTool &&
@@ -207,6 +227,29 @@ export function ObjectsBoard({
               aria-pressed={on}
               onPointerDown={(e) => onWindowDown(e, edge.key, !on)}
               onPointerEnter={() => onWindowEnter(edge.key)}
+            />
+          )
+        })}
+
+      {doorTool &&
+        doorEdges(puzzle.cells, puzzle.walls).map((edge) => {
+          const on = edge.key in puzzle.doors
+          const pos: CSSProperties = {
+            gridColumn: edge.x - originX + 1,
+            gridRow: edge.y - originY + 1,
+          }
+          const a = `${edge.x},${edge.y}`
+          const b = edge.orient === 'v' ? `${edge.x + 1},${edge.y}` : `${edge.x},${edge.y + 1}`
+          return (
+            <button
+              key={edge.key}
+              type="button"
+              className={`wtarget wtarget-${edge.orient} door${on ? ' on' : ''}`}
+              style={pos}
+              aria-label={`${on ? 'Remove' : 'Add'} door on the wall between ${a} and ${b}`}
+              aria-pressed={on}
+              onPointerDown={(e) => onDoorDown(e, edge.key, !on)}
+              onPointerEnter={() => onDoorEnter(edge.key)}
             />
           )
         })}

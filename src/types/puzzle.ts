@@ -26,15 +26,43 @@ export type ObjectKind =
   | 'carpet'
   | 'bed'
   | 'window'
+  | 'door'
   | 'table'
   | 'tv'
   | 'plant'
   | 'shelf'
   | 'box'
   | 'register'
+  | 'boulder'
+  | 'rubble'
+  | 'present'
+  | 'statue'
+  | 'locker'
+  | 'punchingbag'
+  | 'gaspump'
+  | 'catapult'
+  | 'vase'
+  | 'weaponsrack'
+  | 'crate'
+  | 'barrel'
+  | 'lion'
+  | 'bush'
+  | 'pumpkin'
+  | 'trashcan'
+  | 'cow'
+  | 'pig'
+  | 'tree'
+  | 'horse'
+  | 'mud'
+  | 'oilslick'
+  | 'car'
+  | 'tower'
 
-/** The kinds that occupy a square — every object except the wall-bound window. */
-export type CellObjectKind = Exclude<ObjectKind, 'window'>
+/**
+ * The kinds that occupy a square — every object except the wall-bound ones. A
+ * `window` and a `door` both mount on an edge (a wall), not inside a square.
+ */
+export type CellObjectKind = Exclude<ObjectKind, 'window' | 'door'>
 
 /**
  * A movable room-name label that floats over the board. Its position is a
@@ -132,6 +160,14 @@ export interface Puzzle {
    * carries a wall; a window is pruned once its edge stops qualifying.
    */
   windows: Record<string, true>
+  /**
+   * Doors, which — like windows — sit on a wall rather than in a square, keyed by
+   * an edge string in the walls key format (`lib/walls.ts`). Unlike a window, a
+   * door mounts only on an *interior* wall: an edge whose two cells both exist and
+   * that carries a wall (doors connect two rooms, so they never sit on the outer
+   * perimeter). A door is pruned once its edge stops being a walled interior edge.
+   */
+  doors: Record<string, true>
   /**
    * Movable room-name labels floating over the board. Positioned in lattice
    * space (see `RoomLabel`) rather than tied to a single cell, so a name
@@ -240,7 +276,7 @@ export interface Folder {
 
 /** The entire persisted library — one blob in localStorage / a save file. */
 export interface Library {
-  version: 16
+  version: 17
   folders: Folder[]
   puzzles: Record<string, Puzzle>
 }

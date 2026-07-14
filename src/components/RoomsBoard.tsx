@@ -4,7 +4,7 @@ import type { Puzzle, RoomLabel } from '../types/puzzle'
 import { boundsOf, parseCellKey } from '../lib/coords'
 import { parseWallKey, perimeterEdges } from '../lib/walls'
 import { roomBottomCenter, roomOf } from '../lib/rooms'
-import { ObjectDecor, WindowDecor } from './BoardDecor'
+import { DoorDecor, ObjectDecor, WindowDecor } from './BoardDecor'
 
 // A one-cell ring around the shape, matching the shape/objects boards, so all
 // modes render at the same size and left/top perimeter windows (keyed off a
@@ -209,6 +209,7 @@ export function RoomsBoard({
       })}
 
       <WindowDecor puzzle={puzzle} originX={originX} originY={originY} />
+      <DoorDecor puzzle={puzzle} originX={originX} originY={originY} />
 
       {puzzle.labels.map((label) => {
         const live = dragTick && dragTick.id === label.id ? dragTick : label
