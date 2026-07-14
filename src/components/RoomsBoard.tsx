@@ -6,12 +6,6 @@ import { parseWallKey, perimeterEdges } from '../lib/walls'
 import { roomBottomCenter, roomOf } from '../lib/rooms'
 import { DoorDecor, ObjectDecor, WindowDecor } from './BoardDecor'
 
-// A one-cell ring around the shape, matching the shape/objects boards, so all
-// modes render at the same size and left/top perimeter windows (keyed off a
-// cell just outside the shape) land on a real grid track. Labels still clamp to
-// the shape's own bounds, so they can't be dragged out into the ring.
-const PAD = 1
-
 interface RoomsBoardProps {
   puzzle: Puzzle
   /** Drop a new (empty) label at a lattice point; returns it so it can be focused. */
@@ -76,10 +70,12 @@ export function RoomsBoard({
   const maxX = bounds ? bounds.maxX : 0
   const minY = bounds ? bounds.minY : 0
   const maxY = bounds ? bounds.maxY : 0
-  // Render origin includes the padding ring shared with the other boards.
-  const originX = minX - PAD
-  const originY = minY - PAD
-  const cols = maxX - minX + 1 + PAD * 2
+  // The board hugs the shape's own bounds — no padding ring. A top-/left-perimeter
+  // window is the only decor that would fall outside; WindowDecor re-seats it onto
+  // a real cell (`anchorInCell`) as the play board does.
+  const originX = minX
+  const originY = minY
+  const cols = maxX - minX + 1
 
   useEffect(() => {
     if (!isDragging) return
@@ -112,7 +108,7 @@ export function RoomsBoard({
 
   if (!bounds) return null
 
-  const rows = maxY - minY + 1 + PAD * 2
+  const rows = maxY - minY + 1
   const style: CSSProperties = {
     gridTemplateColumns: `repeat(${cols}, var(--cell))`,
     gridTemplateRows: `repeat(${rows}, var(--cell))`,
@@ -208,7 +204,7 @@ export function RoomsBoard({
         )
       })}
 
-      <WindowDecor puzzle={puzzle} originX={originX} originY={originY} />
+      <WindowDecor puzzle={puzzle} originX={originX} originY={originY} anchorInCell />
       <DoorDecor puzzle={puzzle} originX={originX} originY={originY} />
 
       {puzzle.labels.map((label) => {

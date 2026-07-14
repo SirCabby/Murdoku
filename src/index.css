@@ -396,10 +396,15 @@ body {
 }
 .wtarget-v { justify-self: end; align-self: stretch; width: var(--wall-hit); height: 100%; transform: translateX(50%); }
 .wtarget-h { align-self: end; justify-self: stretch; height: var(--wall-hit); width: 100%; transform: translateY(50%); }
+/* Padless boards re-seat a top-/left-perimeter window target onto its neighbour
+   cell's near edge (see ObjectsBoard); these sit the hit strip on that near edge
+   — the same wall line — mirroring the window-icon-*-below/right decor. */
+.wtarget-v-left { justify-self: start; align-self: stretch; width: var(--wall-hit); height: 100%; transform: translateX(-50%); }
+.wtarget-h-top { align-self: start; justify-self: stretch; height: var(--wall-hit); width: 100%; transform: translateY(-50%); }
 /* The visible bar, centred in the hit strip so it sits exactly on the gridline. */
 .wtarget::after { content: ''; position: absolute; background: var(--wall); border-radius: 2px; opacity: 0; transition: opacity 0.08s; }
-.wtarget-v::after { top: 0; bottom: 0; left: 50%; width: var(--wall-thick); transform: translateX(-50%); }
-.wtarget-h::after { left: 0; right: 0; top: 50%; height: var(--wall-thick); transform: translateY(-50%); }
+.wtarget-v::after, .wtarget-v-left::after { top: 0; bottom: 0; left: 50%; width: var(--wall-thick); transform: translateX(-50%); }
+.wtarget-h::after, .wtarget-h-top::after { left: 0; right: 0; top: 50%; height: var(--wall-thick); transform: translateY(-50%); }
 .wtarget:hover::after { opacity: 0.45; }
 .wtarget.on::after { opacity: 1; }
 /* Window edge targets reuse the wall-target geometry, tinted with the accent. */

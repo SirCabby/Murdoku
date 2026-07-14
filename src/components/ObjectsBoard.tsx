@@ -1,7 +1,7 @@
 import { useEffect, useRef } from 'react'
 import type { CSSProperties, PointerEvent as ReactPointerEvent } from 'react'
 import type { CellObjectKind, ObjectKind, Puzzle } from '../types/puzzle'
-import { boundsOf, parseCellKey } from '../lib/coords'
+import { boundsOf, cellKey, parseCellKey } from '../lib/coords'
 import { parseWallKey, perimeterEdges } from '../lib/walls'
 import { OBJECT_LABEL, doorEdges, spanPieces, windowEdges } from '../lib/objects'
 import { spanImageUrl } from '../lib/objectAssets'
@@ -17,10 +17,6 @@ interface ObjectsBoardProps {
   onSetWindow: (key: string, on: boolean) => void
   onSetDoor: (key: string, on: boolean) => void
 }
-
-// A one-cell ring around the shape so perimeter window edges (which key off a
-// cell just outside the shape) land on a real grid track.
-const PAD = 1
 
 /**
  * Object-placement editor board. When a square tool is selected, each cell is a
@@ -64,10 +60,14 @@ export function ObjectsBoard({
   const bounds = boundsOf(Object.keys(puzzle.cells))
   if (!bounds) return null
 
-  const originX = bounds.minX - PAD
-  const originY = bounds.minY - PAD
-  const cols = bounds.maxX - bounds.minX + 1 + PAD * 2
-  const rows = bounds.maxY - bounds.minY + 1 + PAD * 2
+  // The board hugs the shape's own bounds — no padding ring. Cells and interior
+  // targets sit within the shape; a top-/left-perimeter window's decor and its
+  // placement target both re-seat onto a real neighbour cell (see below), so no
+  // outside track is needed.
+  const originX = bounds.minX
+  const originY = bounds.minY
+  const cols = bounds.maxX - bounds.minX + 1
+  const rows = bounds.maxY - bounds.minY + 1
   const style: CSSProperties = {
     gridTemplateColumns: `repeat(${cols}, var(--cell))`,
     gridTemplateRows: `repeat(${rows}, var(--cell))`,
@@ -204,16 +204,33 @@ export function ObjectsBoard({
         )
       })}
 
-      <WindowDecor puzzle={puzzle} originX={originX} originY={originY} />
+      <WindowDecor puzzle={puzzle} originX={originX} originY={originY} anchorInCell />
       <DoorDecor puzzle={puzzle} originX={originX} originY={originY} />
       <LabelDecor puzzle={puzzle} originX={originX} originY={originY} />
 
       {windowTool &&
         windowEdges(puzzle.cells, puzzle.walls).map((edge) => {
           const on = edge.key in puzzle.windows
+          // A top-/left-perimeter edge keys off the cell just outside the shape,
+          // which has no track on this padless board. Re-seat the target onto the
+          // near edge of the existing neighbour — the same wall line — with a
+          // near-edge variant class, mirroring WindowDecor's anchorInCell decor.
+          const outside = !(cellKey(edge.x, edge.y) in puzzle.cells)
+          let gx = edge.x
+          let gy = edge.y
+          let variant = `wtarget-${edge.orient}`
+          if (outside) {
+            if (edge.orient === 'v') {
+              gx = edge.x + 1
+              variant = 'wtarget-v-left'
+            } else {
+              gy = edge.y + 1
+              variant = 'wtarget-h-top'
+            }
+          }
           const pos: CSSProperties = {
-            gridColumn: edge.x - originX + 1,
-            gridRow: edge.y - originY + 1,
+            gridColumn: gx - originX + 1,
+            gridRow: gy - originY + 1,
           }
           const a = `${edge.x},${edge.y}`
           const b = edge.orient === 'v' ? `${edge.x + 1},${edge.y}` : `${edge.x},${edge.y + 1}`
@@ -221,7 +238,7 @@ export function ObjectsBoard({
             <button
               key={edge.key}
               type="button"
-              className={`wtarget wtarget-${edge.orient} window${on ? ' on' : ''}`}
+              className={`wtarget ${variant} window${on ? ' on' : ''}`}
               style={pos}
               aria-label={`${on ? 'Remove' : 'Add'} window on the wall between ${a} and ${b}`}
               aria-pressed={on}

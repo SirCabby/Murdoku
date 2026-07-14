@@ -10,11 +10,6 @@ interface WallsBoardProps {
   onSetWall: (key: string, on: boolean) => void
 }
 
-// A one-cell ring around the shape, matching the shape/objects boards, so all
-// modes render at the same size and left/top perimeter windows (keyed off a
-// cell just outside the shape) land on a real grid track.
-const PAD = 1
-
 /**
  * Walls-mode editor board. A clickable target straddles every interior edge
  * (the gridline between two existing cells); click a target to toggle its wall,
@@ -41,10 +36,14 @@ export function WallsBoard({ puzzle, onSetWall }: WallsBoardProps): JSX.Element 
   const bounds = boundsOf(keys)
   if (!bounds) return null
 
-  const originX = bounds.minX - PAD
-  const originY = bounds.minY - PAD
-  const cols = bounds.maxX - bounds.minX + 1 + PAD * 2
-  const rows = bounds.maxY - bounds.minY + 1 + PAD * 2
+  // The board hugs the shape's own bounds — no padding ring. Interior edge
+  // targets all sit within the shape; the only decor that would fall outside is a
+  // top-/left-perimeter window, which WindowDecor re-seats onto a real cell
+  // (`anchorInCell`) exactly as the play board does.
+  const originX = bounds.minX
+  const originY = bounds.minY
+  const cols = bounds.maxX - bounds.minX + 1
+  const rows = bounds.maxY - bounds.minY + 1
   const style: CSSProperties = {
     gridTemplateColumns: `repeat(${cols}, var(--cell))`,
     gridTemplateRows: `repeat(${rows}, var(--cell))`,
@@ -89,7 +88,7 @@ export function WallsBoard({ puzzle, onSetWall }: WallsBoardProps): JSX.Element 
         )
       })}
 
-      <WindowDecor puzzle={puzzle} originX={originX} originY={originY} />
+      <WindowDecor puzzle={puzzle} originX={originX} originY={originY} anchorInCell />
       <DoorDecor puzzle={puzzle} originX={originX} originY={originY} />
       <LabelDecor puzzle={puzzle} originX={originX} originY={originY} />
 
