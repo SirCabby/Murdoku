@@ -12,7 +12,6 @@ import {
 import { usePlayHistory } from '../state/usePlayHistory'
 import { solveErrors, validateSolve } from '../lib/validate'
 import type { SolveErrors } from '../lib/validate'
-import { solutionCrosses } from '../lib/solution'
 import { PlayerBoard } from './PlayerBoard'
 import { PersonaList } from './PersonaList'
 import type { PlaceMode } from './PersonaList'
@@ -26,8 +25,10 @@ interface PuzzlePlayerProps {
 }
 
 // The revealed answer-key board never draws guesses — it's the author's committed
-// solution, not the player's working — so it always passes the same empty map.
+// solution, not the player's working — so it always passes the same empty map. It
+// also draws no ruled-out X's: the letters alone show the key.
 const NO_GUESSES: Record<string, string[]> = {}
+const NO_CROSSES: Record<string, true> = {}
 
 export function PuzzlePlayer({ puzzleId, onBack, onEdit }: PuzzlePlayerProps): JSX.Element {
   const { library, toggleGuess, setAnswer, toggleCross, clearBoard, setMurderer, setSolved } =
@@ -442,7 +443,7 @@ export function PuzzlePlayer({ puzzleId, onBack, onEdit }: PuzzlePlayerProps): J
                     puzzle={puzzle}
                     answers={puzzle.solution}
                     guesses={NO_GUESSES}
-                    crosses={solutionCrosses(puzzle.solution, puzzle.cells, puzzle.objects)}
+                    crosses={NO_CROSSES}
                     objectCaptions
                   />
                 </div>

@@ -9,11 +9,11 @@ import { isPlacementBlocked } from './objects'
 //   - each persona appears at most once across the whole key, and
 //   - at most one persona sits in any row or column.
 // `setSolution` maintains both invariants on every placement, so the map a caller
-// stores is always a legal key-so-far. Crossed-out cells are never stored: every
-// other placeable cell is implicitly ruled out and drawn as an "X" derived by
-// `solutionCrosses`. Every function returns a new map (or the same reference when
-// nothing changed), so callers replace `puzzle.solution` with the result, and the
-// module stays free of React.
+// stores is always a legal key-so-far. Only the definitive placements are stored;
+// unplaced cells are left blank on the key (no ruled-out "X" is drawn). Every
+// function returns a new map (or the same reference when nothing changed), so
+// callers replace `puzzle.solution` with the result, and the module stays free of
+// React.
 
 /** The persona placed in one cell of the key, or null if none. */
 export function solutionAt(
@@ -112,24 +112,4 @@ export function pruneSolutionBlocked(
     else next[key] = id
   }
   return changed ? next : solution
-}
-
-/**
- * The cells the answer key rules out, drawn as a big "X": every existing cell that
- * holds no persona and no placement-blocking object. Derived fresh from the key
- * (never stored), so it always reflects the current placements — a cell flips from
- * X to a letter the moment a persona lands there, and back when one leaves.
- */
-export function solutionCrosses(
-  solution: Record<string, string>,
-  cells: Record<string, CellState>,
-  objects: Record<string, CellObjectKind>
-): Record<string, true> {
-  const crosses: Record<string, true> = {}
-  for (const key of Object.keys(cells)) {
-    if (key in solution) continue
-    if (isPlacementBlocked(objects, key)) continue
-    crosses[key] = true
-  }
-  return crosses
 }

@@ -1,7 +1,6 @@
 import { useEffect, useRef, useState } from 'react'
 import type { Puzzle } from '../types/puzzle'
 import { personaLabel, suspectsOf } from '../lib/personas'
-import { solutionCrosses } from '../lib/solution'
 import { PlayerBoard } from './PlayerBoard'
 import { PersonaList } from './PersonaList'
 
@@ -14,15 +13,16 @@ interface SolutionEditorProps {
 }
 
 // The answer-key board never draws guesses — the author only commits definitive
-// placements — so it always passes the same empty guess map.
+// placements — so it always passes the same empty guess map. It also draws no
+// ruled-out X's: the placed letters alone show the key.
 const NO_GUESSES: Record<string, string[]> = {}
+const NO_CROSSES: Record<string, true> = {}
 
 /**
  * The editor's Answer key tab: pick a cast member, then click rooms to place the
  * puzzle's definitive solution. Placement is authoritative and self-correcting —
  * the store enforces one cell per persona and at most one per row / column (see
- * `lib/solution.ts`) — and every other placeable room is X'd automatically to show
- * the ruled-out cells. Reuses the play board and persona list so the key looks
+ * `lib/solution.ts`). Reuses the play board and persona list so the key looks
  * exactly like the solved puzzle a player is working toward.
  */
 export function SolutionEditor({ puzzle, onPlace, onSetMurderer }: SolutionEditorProps): JSX.Element {
@@ -64,9 +64,6 @@ export function SolutionEditor({ puzzle, onPlace, onSetMurderer }: SolutionEdito
     return () => window.removeEventListener('mousemove', onMove)
   }, [holding])
 
-  // Every placeable room with no persona is ruled out — derived fresh each render.
-  const crosses = solutionCrosses(puzzle.solution, puzzle.cells, puzzle.objects)
-
   // The answer key's murderer dropdown lists only suspects (never the victim).
   // Resolve the stored id to a live suspect so a stale one reads as no choice made.
   const suspects = suspectsOf(puzzle.personas)
@@ -84,7 +81,7 @@ export function SolutionEditor({ puzzle, onPlace, onSetMurderer }: SolutionEdito
             active={holding}
             answers={puzzle.solution}
             guesses={NO_GUESSES}
-            crosses={crosses}
+            crosses={NO_CROSSES}
             onPlace={holding && activePersona ? (x, y) => onPlace(x, y, activePersona.id) : undefined}
           />
         </div>
